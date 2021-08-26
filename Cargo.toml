@@ -1,0 +1,9 @@
+[package]
+name = "leelacoin"
+version = "0.0.1"
+authors = ["Ofek Shochat"]
+
+[dependencies]
+sha3 = "*"
+hex = "*"
+tentacle = { version = "0.3", features = ["molc"] }
