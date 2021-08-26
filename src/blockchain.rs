@@ -1,9 +1,7 @@
-use block;
-
-use crate::block::Block;
+use block::Block;
 
 pub struct Chain {
-  pub blocks: Vec<block::Block>
+  pub blocks: Vec<Block>
 }
 
 impl Chain {
@@ -15,7 +13,7 @@ impl Chain {
 
   pub fn create_genesis(&mut self) {
     self.blocks.push(
-      block::Block::new(
+      Block::new(
         "NOONE".to_string(),
         "NOONE".to_string(),
         0,
@@ -31,11 +29,11 @@ impl Chain {
 
   pub fn add_block(&mut self, from: String, to: String, amount: u64) {
     self.prepend_block(
-      block::Block::new(from, to, amount, self.last().summary.clone(), false)
+      Block::new(from, to, amount, self.last().summary.clone(), false)
     );
   }
 
-  fn prepend_block(&mut self, block: block::Block) {
+  fn prepend_block(&mut self, block: Block) {
     self.blocks.insert(0, block)
   }
 

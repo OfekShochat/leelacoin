@@ -6,4 +6,3 @@ authors = ["Ofek Shochat"]
 [dependencies]
 sha3 = "*"
 hex = "*"
-tentacle = { version = "0.3", features = ["molc"] }
