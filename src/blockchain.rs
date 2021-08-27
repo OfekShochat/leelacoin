@@ -1,4 +1,4 @@
-use block::Block;
+use crate::block::Block;
 
 pub struct Chain {
   pub blocks: Vec<Block>
@@ -23,7 +23,7 @@ impl Chain {
     )
   }
 
-  fn last(&self) -> &Block {
+  pub fn last(&self) -> &Block {
     &self.blocks[self.blocks.len()-1]
   }
 

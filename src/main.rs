@@ -1,7 +1,11 @@
 extern crate sha3;
+extern crate futures;
+extern crate libp2p;
+extern crate serde_json;
 
 pub mod block;
 mod blockchain;
+mod network;
 
 fn main() {
   let b = block::Block::new("hello".to_string(), "hello".to_string(), 5, "".to_string(), false);
@@ -11,4 +15,5 @@ fn main() {
   bc.add_block("from".to_string(), "to".to_string(), 5);
   println!("{}", bc.blocks[0].summary);
   println!("{}", bc.verify());
+  network::main().unwrap();
 }

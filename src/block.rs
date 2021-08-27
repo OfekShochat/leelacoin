@@ -3,7 +3,7 @@ extern crate hex;
 use self::hex::ToHex;
 use sha3::{Digest, Sha3_256};
 
-const COST: u32 = 5;
+const COST: u32 = 2;
 
 #[derive(Clone)]
 struct DataPoint {
