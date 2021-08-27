@@ -22,7 +22,7 @@ impl Chain {
   }
 
   pub fn last(&self) -> &Block {
-    &self.blocks[self.blocks.len() - 1]
+    &self.blocks[0]
   }
 
   pub fn add_block(&mut self, from: String, to: String, amount: u64) {

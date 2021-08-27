@@ -1,16 +1,17 @@
 use async_std::task;
 use futures::{future, prelude::*};
 use libp2p::{
-  floodsub::{self, Floodsub, FloodsubEvent},
+  floodsub::{self, Floodsub, FloodsubEvent, Topic},
   identity,
   mdns::{Mdns, MdnsConfig, MdnsEvent},
   swarm::{NetworkBehaviourEventProcess, SwarmEvent},
-  Multiaddr, NetworkBehaviour, PeerId, Swarm,
+  NetworkBehaviour, PeerId, Swarm
 };
 
 use serde_json::json;
 
 use crate::blockchain;
+use crate::block::Block;
 
 use std::{
   error::Error,
@@ -18,12 +19,24 @@ use std::{
 };
 
 #[derive(NetworkBehaviour)]
-struct MyBehaviour {
+struct Client {
   floodsub: Floodsub,
   mdns: Mdns,
 }
 
-impl NetworkBehaviourEventProcess<FloodsubEvent> for MyBehaviour {
+impl Client {
+  pub fn report_mine(&mut self, topic: Topic, block: &Block) {
+    self.floodsub.publish(topic, json!({
+      "report": "mined",
+      "hash": block.summary,
+      "data": block.data.get_string(),
+      "previous": block.previous_summary,
+      "nonce": block.nonce
+    }).to_string())
+  }
+}
+
+impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
   // Called when `floodsub` produces an event.
   fn inject_event(&mut self, message: FloodsubEvent) {
     if let FloodsubEvent::Message(message) = message {
@@ -36,7 +49,7 @@ impl NetworkBehaviourEventProcess<FloodsubEvent> for MyBehaviour {
   }
 }
 
-impl NetworkBehaviourEventProcess<MdnsEvent> for MyBehaviour {
+impl NetworkBehaviourEventProcess<MdnsEvent> for Client {
   // Called when `mdns` produces an event.
   fn inject_event(&mut self, event: MdnsEvent) {
     match event {
@@ -70,41 +83,43 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
   // Create a Swarm to manage peers and events
   let mut swarm = {
     let mdns = task::block_on(Mdns::new(MdnsConfig::default()))?;
-    let mut behaviour = MyBehaviour {
+    let mut behavior = Client {
       floodsub: Floodsub::new(local_peer_id),
       mdns,
     };
 
-    behaviour.floodsub.subscribe(floodsub_topic.clone());
-    Swarm::new(transport, behaviour, local_peer_id)
+    behavior.floodsub.subscribe(floodsub_topic.clone());
+    Swarm::new(transport, behavior, local_peer_id)
   };
 
   swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
 
+  println!("making genesis");
   let mut bc = blockchain::Chain::new();
+  println!("done making genesis");
 
+  let mut can_make = false;
   task::block_on(future::poll_fn(move |cx: &mut Context<'_>| {
     loop {
       match swarm.poll_next_unpin(cx) {
         Poll::Ready(Some(event)) => {
           if let SwarmEvent::NewListenAddr { address, .. } = event {
             println!("Listening on {:?}", address);
+            can_make = true;
+          }
+        },
+        Poll::Ready(None) => return Poll::Ready(Ok(())),
+        Poll::Pending => {
+          if can_make {
+            bc.add_block("poop".to_string(), "poopoo".to_string(), 5);
+            let l = bc.last();
+            swarm.behaviour_mut().report_mine(floodsub_topic.clone(), l);
+          } else {
+            break
           }
         }
-        Poll::Ready(None) => return Poll::Ready(Ok(())),
-        Poll::Pending => break,
       }
     }
-    bc.add_block("poop".to_string(), "poopoo".to_string(), 5);
-    let l = bc.last();
-    swarm.behaviour_mut().floodsub.publish(
-      floodsub_topic.clone(),
-      json!({
-        "poop": l.summary
-      })
-      .to_string()
-      .as_bytes(),
-    );
     Poll::Pending
   }))
 }

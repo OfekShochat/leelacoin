@@ -1,24 +1,35 @@
 extern crate hex;
 
 use self::hex::ToHex;
+use serde_json::json;
 use sha3::{Digest, Sha3_256};
 
 const COST: u32 = 2;
 
 #[derive(Clone)]
-struct DataPoint {
+pub struct DataPoint {
   from: String,
   to: String,
   amount: u64,
 }
 
+impl DataPoint {
+  pub fn get_string(&self) -> String {
+    json!({
+      "from": self.from,
+      "to": self.to,
+      "amount": self.amount
+    }).to_string()
+  }
+}
+
 #[derive(Clone)]
 pub struct Block {
   pub summary: String,
-  data: DataPoint,
-  previous_summary: String,
-  nonce: u64,
-  genesis: bool,
+  pub data: DataPoint,
+  pub previous_summary: String,
+  pub nonce: u64,
+  pub genesis: bool,
 }
 
 fn hash(data: &String) -> String {
