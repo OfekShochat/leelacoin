@@ -13,10 +13,7 @@ use serde_json::json;
 use crate::blockchain;
 use crate::block::Block;
 
-use std::{
-  error::Error,
-  task::{Context, Poll},
-};
+use std::{error::Error, task::{Context, Poll}};
 
 #[derive(NetworkBehaviour)]
 struct Client {
@@ -32,7 +29,7 @@ impl Client {
       "data": block.data.get_string(),
       "previous": block.previous_summary,
       "nonce": block.nonce
-    }).to_string())
+    }).to_string());
   }
 }
 
@@ -111,12 +108,11 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
         Poll::Ready(None) => return Poll::Ready(Ok(())),
         Poll::Pending => {
           if can_make {
-            bc.add_block("poop".to_string(), "poopoo".to_string(), 5);
+            bc.add_block("poopa".to_string(), "poopoo".to_string(), 5);
             let l = bc.last();
             swarm.behaviour_mut().report_mine(floodsub_topic.clone(), l);
-          } else {
-            break
           }
+          break
         }
       }
     }

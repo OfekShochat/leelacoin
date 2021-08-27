@@ -1031,7 +1031,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3",
- "tokio",
 ]
 
 [[package]]
@@ -2471,16 +2470,6 @@ name = "tinyvec_macros"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
-
-[[package]]
-name = "tokio"
-version = "1.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92036be488bb6594459f2e03b60e42df6f937fe6ca5c5ffdcb539c6b84dc40f5"
-dependencies = [
- "autocfg",
- "pin-project-lite 0.2.7",
-]
 
 [[package]]
 name = "toml"
