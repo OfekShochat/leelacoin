@@ -9,7 +9,7 @@ const COST: u32 = 2;
 struct DataPoint {
   from: String,
   to: String,
-  amount: u64
+  amount: u64,
 }
 
 #[derive(Clone)]
@@ -18,17 +18,15 @@ pub struct Block {
   data: DataPoint,
   previous_summary: String,
   nonce: u64,
-  genesis: bool
+  genesis: bool,
 }
 
-  fn hash(data: &String) -> String {
-    let mut hasher = Sha3_256::new();
-    hasher.update(data);
+fn hash(data: &String) -> String {
+  let mut hasher = Sha3_256::new();
+  hasher.update(data);
 
-    hasher.finalize()
-      .as_slice()
-      .encode_hex()
-  }
+  hasher.finalize().as_slice().encode_hex()
+}
 
 fn hash_with_cost(data: String) -> (String, u64) {
   let mut h = "".to_string();
@@ -42,19 +40,15 @@ fn hash_with_cost(data: String) -> (String, u64) {
 
 impl Block {
   pub fn new(from: String, to: String, amount: u64, previous_hash: String, genesis: bool) -> Block {
-    let (summary, nonce) = hash_with_cost( 
-      from.clone() +
-      &to +
-      &previous_hash +
-      amount.to_string().as_str()
-    );
+    let (summary, nonce) =
+      hash_with_cost(from.clone() + &to + &previous_hash + amount.to_string().as_str());
 
     Block {
       summary,
       data: DataPoint { from, to, amount },
       previous_summary: previous_hash,
       nonce,
-      genesis
+      genesis,
     }
   }
 
@@ -62,10 +56,10 @@ impl Block {
     if !self.genesis {
       hash(
         &(self.data.from.clone() +
-        &self.data.to +
-        &self.previous_summary +
-        self.data.amount.to_string().as_str() +
-        self.nonce.to_string().as_str())
+          &self.data.to +
+          &self.previous_summary +
+          self.data.amount.to_string().as_str() +
+          self.nonce.to_string().as_str()),
       ) == self.summary
     } else {
       true

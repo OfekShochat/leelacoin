@@ -12,7 +12,10 @@ use serde_json::json;
 
 use crate::blockchain;
 
-use std::{error::Error, task::{Context, Poll}};
+use std::{
+  error::Error,
+  task::{Context, Poll},
+};
 
 #[derive(NetworkBehaviour)]
 struct MyBehaviour {
@@ -92,22 +95,16 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
         Poll::Pending => break,
       }
     }
-    bc.add_block(
-      "poop".to_string(),
-      "poopoo".to_string(),
-      5
-    );
+    bc.add_block("poop".to_string(), "poopoo".to_string(), 5);
     let l = bc.last();
-    swarm
-      .behaviour_mut()
-      .floodsub
-      .publish(
-        floodsub_topic.clone(),
-        json!({
-          "poop": l.summary
-        }).to_string()
-          .as_bytes()
-      );
+    swarm.behaviour_mut().floodsub.publish(
+      floodsub_topic.clone(),
+      json!({
+        "poop": l.summary
+      })
+      .to_string()
+      .as_bytes(),
+    );
     Poll::Pending
   }))
 }
