@@ -1,11 +1,11 @@
-extern crate futures;
-extern crate libp2p;
+extern crate lazy_static;
 extern crate serde_json;
 extern crate sha3;
 
 pub mod block;
 mod blockchain;
 mod network;
+mod p2p;
 
 fn main() {
   // let b = block::Block::new(
@@ -21,5 +21,6 @@ fn main() {
   // bc.add_block("from".to_string(), "to".to_string(), 5);
   // println!("{}", bc.blocks[0].summary);
   // println!("{}", bc.verify());
-  network::main().unwrap();
+  // network::run_client()
+  let n = p2p::PeerNode::new();
 }

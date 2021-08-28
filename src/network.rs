@@ -1,121 +1,97 @@
-use async_std::task;
-use futures::{future, prelude::*};
-use libp2p::{
-  floodsub::{self, Floodsub, FloodsubEvent, Topic},
-  identity,
-  mdns::{Mdns, MdnsConfig, MdnsEvent},
-  swarm::{NetworkBehaviourEventProcess, SwarmEvent},
-  NetworkBehaviour, PeerId, Swarm
+use lazy_static::lazy_static;
+
+// use clap::App;
+use snow::{params::NoiseParams, Builder};
+use std::{
+  io::{self, Read, Write},
+  net::{TcpListener, TcpStream},
 };
 
-use serde_json::json;
-
-use crate::blockchain;
-use crate::block::Block;
-
-use std::{error::Error, task::{Context, Poll}};
-
-#[derive(NetworkBehaviour)]
-struct Client {
-  floodsub: Floodsub,
-  mdns: Mdns,
+static SECRET: &[u8] = b"i don't care for fidget spinners";
+lazy_static! {
+  static ref PARAMS: NoiseParams = "Noise_XXpsk3_25519_ChaChaPoly_BLAKE2s".parse().unwrap();
 }
 
-impl Client {
-  pub fn report_mine(&mut self, topic: Topic, block: &Block) {
-    self.floodsub.publish(topic, json!({
-      "report": "mined",
-      "hash": block.summary,
-      "data": block.data.get_string(),
-      "previous": block.previous_summary,
-      "nonce": block.nonce
-    }).to_string());
+fn recv(stream: &mut TcpStream) -> io::Result<Vec<u8>> {
+  let mut msg_len_buf = [0u8; 2];
+  stream.read_exact(&mut msg_len_buf)?;
+  let msg_len = ((msg_len_buf[0] as usize) << 8) + (msg_len_buf[1] as usize);
+  let mut msg = vec![0u8; msg_len];
+  stream.read_exact(&mut msg[..])?;
+  Ok(msg)
+}
+
+/// Hyper-basic stream transport sender. 16-bit BE size followed by payload.
+fn send(stream: &mut TcpStream, buf: &[u8]) {
+  let msg_len_buf = [(buf.len() >> 8) as u8, (buf.len() & 0xff) as u8];
+  stream.write_all(&msg_len_buf).unwrap();
+  stream.write_all(buf).unwrap();
+}
+
+pub fn run_server() {
+  let mut buf = vec![0u8; 65535];
+
+  // Initialize our responder using a builder.
+  let builder: Builder<'_> = Builder::new(PARAMS.clone());
+  let static_key = builder.generate_keypair().unwrap().private;
+  let mut noise =
+    builder.local_private_key(&static_key).psk(3, SECRET).build_responder().unwrap();
+
+  // Wait on our client's arrival...
+  println!("listening on 127.0.0.1:9999");
+  let (mut stream, _) = TcpListener::bind("127.0.0.1:9999").unwrap().accept().unwrap();
+
+  // <- e
+  noise.read_message(&recv(&mut stream).unwrap(), &mut buf).unwrap();
+
+  // -> e, ee, s, es
+  let len = noise.write_message(&[0u8; 0], &mut buf).unwrap();
+  send(&mut stream, &buf[..len]);
+
+  // <- s, se
+  noise.read_message(&recv(&mut stream).unwrap(), &mut buf).unwrap();
+
+  // Transition the state machine into transport mode now that the handshake is complete.
+  let mut noise = noise.into_transport_mode().unwrap();
+
+  while let Ok(msg) = recv(&mut stream) {
+    let len = noise.read_message(&msg, &mut buf).unwrap();
+    println!("client said: {}", String::from_utf8_lossy(&buf[..len]));
   }
+  println!("connection closed.");
 }
 
-impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
-  // Called when `floodsub` produces an event.
-  fn inject_event(&mut self, message: FloodsubEvent) {
-    if let FloodsubEvent::Message(message) = message {
-      println!(
-        "Received: '{:?}' from {:?}",
-        String::from_utf8_lossy(&message.data),
-        message.source
-      );
-    }
+pub fn run_client() {
+  let mut buf = vec![0u8; 65535];
+
+  // Initialize our initiator using a builder.
+  let builder: Builder<'_> = Builder::new(PARAMS.clone());
+  let static_key = builder.generate_keypair().unwrap().private;
+  let mut noise =
+    builder.local_private_key(&static_key).psk(3, SECRET).build_initiator().unwrap();
+
+  // Connect to our server, which is hopefully listening.
+  let mut stream = TcpStream::connect("127.0.0.1:9999").unwrap();
+  println!("connected...");
+
+  // -> e
+  let len = noise.write_message(&[], &mut buf).unwrap();
+  send(&mut stream, &buf[..len]);
+
+  // <- e, ee, s, es
+  noise.read_message(&recv(&mut stream).unwrap(), &mut buf).unwrap();
+
+  // -> s, se
+  let len = noise.write_message(&[], &mut buf).unwrap();
+  send(&mut stream, &buf[..len]);
+
+  let mut noise = noise.into_transport_mode().unwrap();
+  println!("session established...");
+
+  // Get to the important business of sending secured data.
+  for _ in 0..10 {
+    let len = noise.write_message(b"HACK THE PLANET", &mut buf).unwrap();
+    send(&mut stream, &buf[..len]);
   }
-}
-
-impl NetworkBehaviourEventProcess<MdnsEvent> for Client {
-  // Called when `mdns` produces an event.
-  fn inject_event(&mut self, event: MdnsEvent) {
-    match event {
-      MdnsEvent::Discovered(list) => {
-        for (peer, _) in list {
-          self.floodsub.add_node_to_partial_view(peer);
-        }
-      }
-      MdnsEvent::Expired(list) => {
-        for (peer, _) in list {
-          if !self.mdns.has_node(&peer) {
-            self.floodsub.remove_node_from_partial_view(&peer);
-          }
-        }
-      }
-    }
-  }
-}
-
-#[async_std::main]
-pub async fn main() -> Result<(), Box<dyn Error>> {
-  let local_key = identity::Keypair::generate_ed25519();
-  let local_peer_id = PeerId::from(local_key.public());
-  println!("Local peer id: {:?}", local_peer_id);
-
-  // Set up a an encrypted DNS-enabled TCP Transport over the Mplex and Yamux protocols
-  let transport = libp2p::development_transport(local_key).await?;
-
-  // Create a Floodsub topic
-  let floodsub_topic = floodsub::Topic::new("chat");
-  // Create a Swarm to manage peers and events
-  let mut swarm = {
-    let mdns = task::block_on(Mdns::new(MdnsConfig::default()))?;
-    let mut behavior = Client {
-      floodsub: Floodsub::new(local_peer_id),
-      mdns,
-    };
-
-    behavior.floodsub.subscribe(floodsub_topic.clone());
-    Swarm::new(transport, behavior, local_peer_id)
-  };
-
-  swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
-
-  println!("making genesis");
-  let mut bc = blockchain::Chain::new();
-  println!("done making genesis");
-
-  let mut can_make = false;
-  task::block_on(future::poll_fn(move |cx: &mut Context<'_>| {
-    loop {
-      match swarm.poll_next_unpin(cx) {
-        Poll::Ready(Some(event)) => {
-          if let SwarmEvent::NewListenAddr { address, .. } = event {
-            println!("Listening on {:?}", address);
-            can_make = true;
-          }
-        },
-        Poll::Ready(None) => return Poll::Ready(Ok(())),
-        Poll::Pending => {
-          if can_make {
-            bc.add_block("poopa".to_string(), "poopoo".to_string(), 5);
-            let l = bc.last();
-            swarm.behaviour_mut().report_mine(floodsub_topic.clone(), l);
-          }
-          break
-        }
-      }
-    }
-    Poll::Pending
-  }))
+  println!("notified server of intent to hack planet.");
 }
