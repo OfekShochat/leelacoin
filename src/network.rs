@@ -13,7 +13,7 @@ use serde_json::json;
 use crate::blockchain;
 use crate::block::Block;
 
-use std::{error::Error, task::{Context, Poll}};
+use std::{error::Error, sync::mpsc::{self, Receiver, Sender}, task::{Context, Poll}, time::Duration};
 
 #[derive(NetworkBehaviour)]
 struct Client {
@@ -66,6 +66,15 @@ impl NetworkBehaviourEventProcess<MdnsEvent> for Client {
   }
 }
 
+fn process(recv: Receiver<String>, sender: Sender<Block>) {
+  loop {
+    let mut bc = blockchain::Chain::new();
+    bc.add_block("poopa".to_string(), "poopoo".to_string(), 5);
+    let l = bc.last();
+    sender.send(l.to_owned()).unwrap();
+  }
+}
+
 #[async_std::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {
   let local_key = identity::Keypair::generate_ed25519();
@@ -89,11 +98,13 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     Swarm::new(transport, behavior, local_peer_id)
   };
 
-  swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
+  let (sender, receiver) = mpsc::channel();
+  let (sender2, receiver2) = mpsc::channel();
+  std::thread::spawn(move || {
+    process(receiver, sender2)
+  });
 
-  println!("making genesis");
-  let mut bc = blockchain::Chain::new();
-  println!("done making genesis");
+  swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
 
   let mut can_make = false;
   task::block_on(future::poll_fn(move |cx: &mut Context<'_>| {
@@ -108,9 +119,10 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
         Poll::Ready(None) => return Poll::Ready(Ok(())),
         Poll::Pending => {
           if can_make {
-            bc.add_block("poopa".to_string(), "poopoo".to_string(), 5);
-            let l = bc.last();
-            swarm.behaviour_mut().report_mine(floodsub_topic.clone(), l);
+            let recieved = receiver2.recv_timeout(Duration::from_secs_f32(0.1));
+            if recieved.is_ok() {
+              swarm.behaviour_mut().report_mine(floodsub_topic.clone(), &recieved.unwrap())
+            }
           }
           break
         }
