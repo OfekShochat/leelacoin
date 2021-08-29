@@ -87,7 +87,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
   let transport = libp2p::development_transport(local_key).await?;
 
   // Create a Floodsub topic
-  let floodsub_topic = floodsub::Topic::new("chat");
+  let floodsub_topic = floodsub::Topic::new("leelacoin");
   // Create a Swarm to manage peers and events
   let mut swarm = {
     let mdns = task::block_on(Mdns::new(MdnsConfig::default()))?;
@@ -114,7 +114,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
       match swarm.poll_next_unpin(cx) {
         Poll::Ready(Some(event)) => {
           if let SwarmEvent::NewListenAddr { address, .. } = event {
-            println!("Listening on {:?}", address);
+            println!("Listening on {}:{}", address, floodsub_topic.id());
             can_make = true;
           }
         },
