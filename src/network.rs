@@ -42,6 +42,7 @@ impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
         String::from_utf8_lossy(&message.data),
         message.source
       );
+      // if its a new block, validate it yourself and if you agree then send it to all peers.
     }
   }
 }
@@ -52,6 +53,7 @@ impl NetworkBehaviourEventProcess<MdnsEvent> for Client {
     match event {
       MdnsEvent::Discovered(list) => {
         for (peer, _) in list {
+          println!("discovered {:?}", peer);
           self.floodsub.add_node_to_partial_view(peer);
         }
       }
@@ -67,9 +69,9 @@ impl NetworkBehaviourEventProcess<MdnsEvent> for Client {
 }
 
 fn process(recv: Receiver<String>, sender: Sender<Block>) {
+  let mut bc = blockchain::Chain::new();
   loop {
-    let mut bc = blockchain::Chain::new();
-    bc.add_block("poopa".to_string(), "poopoo".to_string(), 5);
+    bc.add_block("poop".to_string(), "poopoo".to_string(), 5);
     let l = bc.last();
     sender.send(l.to_owned()).unwrap();
   }

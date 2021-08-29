@@ -4,7 +4,7 @@ use self::hex::ToHex;
 use serde_json::json;
 use sha3::{Digest, Sha3_256};
 
-const COST: u32 = 6;
+const COST: u32 = 5;
 
 #[derive(Clone)]
 pub struct DataPoint {
