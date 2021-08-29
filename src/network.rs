@@ -98,7 +98,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     Swarm::new(transport, behavior, local_peer_id)
   };
 
-  let (sender, receiver) = mpsc::channel();
+  let (_sender, receiver) = mpsc::channel();
   let (sender2, receiver2) = mpsc::channel();
   std::thread::spawn(move || {
     process(receiver, sender2)
