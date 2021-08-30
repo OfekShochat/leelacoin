@@ -15,7 +15,13 @@ use serde_json::json;
 use crate::block::Block;
 use crate::blockchain;
 
-use std::{error::Error, str::FromStr, sync::mpsc::{self, Receiver, Sender}, task::{Context, Poll}, time::Duration};
+use std::{
+  error::Error,
+  str::FromStr,
+  sync::mpsc::{self, Receiver, Sender},
+  task::{Context, Poll},
+  time::Duration,
+};
 
 #[derive(NetworkBehaviour)]
 struct Client {
@@ -23,7 +29,7 @@ struct Client {
   mdns: Mdns,
 
   #[behaviour(ignore)]
-  sender: Sender<String>
+  sender: Sender<String>,
 }
 
 impl Client {
@@ -54,7 +60,7 @@ impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
         String::from_utf8_lossy(decompressed.as_slice()),
         message.source
       );
-      /* 
+      /*
         check if this chain is valid.
         If not, report it with `self.sender.send()`.
       */
