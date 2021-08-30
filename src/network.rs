@@ -20,7 +20,6 @@ use std::{
   str::FromStr,
   sync::mpsc::{self, Receiver, Sender},
   task::{Context, Poll},
-  time::Duration,
 };
 
 #[derive(NetworkBehaviour)]
