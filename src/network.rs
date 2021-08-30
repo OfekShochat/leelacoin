@@ -36,11 +36,11 @@ impl Client {
   pub fn report_mine(&mut self, topic: Topic, block: &Block) {
     let compressed = compress_to_vec(
       json!({
-          "report": "mined",
-          "hash": block.summary,
-          "data": block.data.to_string(),
-          "previous": block.previous_summary,
-          "nonce": block.nonce
+        "report": "mined",
+        "hash": block.summary,
+        "data": block.data.to_string(),
+        "previous": block.previous_summary,
+        "nonce": block.nonce
       })
       .to_string()
       .as_bytes(),
