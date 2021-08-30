@@ -1,3 +1,5 @@
+#![feature(duration_constants)]
+
 extern crate futures;
 extern crate libp2p;
 extern crate miniz_oxide;
