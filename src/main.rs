@@ -1,5 +1,6 @@
 extern crate futures;
 extern crate libp2p;
+extern crate miniz_oxide;
 extern crate serde_json;
 extern crate sha3;
 
