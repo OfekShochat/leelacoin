@@ -12,13 +12,7 @@ impl Chain {
   }
 
   pub fn create_genesis(&mut self) {
-    self.blocks.push(Block::new(
-      "NOONE".to_string(),
-      "NOONE".to_string(),
-      0,
-      "NONE".to_string(),
-      true,
-    ))
+    self.blocks.push(Block::new_genesis())
   }
 
   pub fn last(&self) -> &Block {
@@ -31,7 +25,6 @@ impl Chain {
       to,
       amount,
       self.last().summary.clone(),
-      false,
     ));
   }
 

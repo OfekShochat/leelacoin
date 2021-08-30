@@ -4,7 +4,7 @@ use self::hex::ToHex;
 use serde_json::json;
 use sha3::{Digest, Sha3_256};
 
-const COST: u32 = 5;
+const COST: u32 = 7;
 
 #[derive(Clone)]
 pub struct DataPoint {
@@ -14,7 +14,7 @@ pub struct DataPoint {
 }
 
 impl DataPoint {
-  pub fn get_string(&self) -> String {
+  pub fn to_string(&self) -> String {
     json!({
       "from": self.from,
       "to": self.to,
@@ -50,7 +50,7 @@ fn hash_with_cost(data: String) -> (String, u64) {
 }
 
 impl Block {
-  pub fn new(from: String, to: String, amount: u64, previous_hash: String, genesis: bool) -> Block {
+  pub fn new(from: String, to: String, amount: u64, previous_hash: String) -> Block {
     let (summary, nonce) =
       hash_with_cost(from.clone() + &to + &previous_hash + amount.to_string().as_str());
 
@@ -59,7 +59,17 @@ impl Block {
       data: DataPoint { from, to, amount },
       previous_summary: previous_hash,
       nonce,
-      genesis,
+      genesis: false,
+    }
+  }
+
+  pub fn new_genesis() -> Block {
+    Block {
+      summary: "NONE".to_string(),
+      data: DataPoint { from: "NOONE".to_string(), to: "NOONE".to_string(), amount: 0 },
+      previous_summary: "NONE".to_string(),
+      nonce: 0,
+      genesis: false,
     }
   }
 

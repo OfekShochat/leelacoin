@@ -26,7 +26,7 @@ impl Client {
     self.floodsub.publish(topic, json!({
       "report": "mined",
       "hash": block.summary,
-      "data": block.data.get_string(),
+      "data": block.data.to_string(),
       "previous": block.previous_summary,
       "nonce": block.nonce
     }).to_string());
@@ -74,6 +74,9 @@ fn process(recv: Receiver<String>, sender: Sender<Block>) {
     bc.add_block("poop".to_string(), "poopoo".to_string(), 5);
     let l = bc.last();
     sender.send(l.to_owned()).unwrap();
+    if !bc.verify() {
+      return
+    }
   }
 }
 
