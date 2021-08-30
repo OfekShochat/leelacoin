@@ -19,7 +19,8 @@ impl DataPoint {
       "from": self.from,
       "to": self.to,
       "amount": self.amount
-    }).to_string()
+    })
+    .to_string()
   }
 }
 
@@ -66,7 +67,11 @@ impl Block {
   pub fn new_genesis() -> Block {
     Block {
       summary: "NONE".to_string(),
-      data: DataPoint { from: "NOONE".to_string(), to: "NOONE".to_string(), amount: 0 },
+      data: DataPoint {
+        from: "NOONE".to_string(),
+        to: "NOONE".to_string(),
+        amount: 0,
+      },
       previous_summary: "NONE".to_string(),
       nonce: 0,
       genesis: false,
