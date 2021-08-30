@@ -1027,6 +1027,7 @@ dependencies = [
  "futures",
  "hex",
  "libp2p",
+ "miniz_oxide",
  "once_cell",
  "serde",
  "serde_json",
