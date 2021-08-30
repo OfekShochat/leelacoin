@@ -5,20 +5,22 @@ use libp2p::{
   identity,
   mdns::{Mdns, MdnsConfig, MdnsEvent},
   swarm::{NetworkBehaviourEventProcess, SwarmEvent},
-  NetworkBehaviour, PeerId, Swarm
+  NetworkBehaviour, PeerId, Swarm,
 };
 
-use miniz_oxide::{
-  inflate::decompress_to_vec,
-  deflate::compress_to_vec
-};
+use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 
 use serde_json::json;
 
-use crate::blockchain;
 use crate::block::Block;
+use crate::blockchain;
 
-use std::{error::Error, sync::mpsc::{self, Receiver, Sender}, task::{Context, Poll}, time::Duration};
+use std::{
+  error::Error,
+  sync::mpsc::{self, Receiver, Sender},
+  task::{Context, Poll},
+  time::Duration,
+};
 
 #[derive(NetworkBehaviour)]
 struct Client {
@@ -28,15 +30,18 @@ struct Client {
 
 impl Client {
   pub fn report_mine(&mut self, topic: Topic, block: &Block) {
-    let compressed = 
-      compress_to_vec(
-        json!({
+    let compressed = compress_to_vec(
+      json!({
           "report": "mined",
           "hash": block.summary,
           "data": block.data.to_string(),
           "previous": block.previous_summary,
           "nonce": block.nonce
-      }).to_string().as_bytes(), 8);
+      })
+      .to_string()
+      .as_bytes(),
+      8,
+    );
     self.floodsub.publish(topic, compressed);
   }
 }
@@ -84,7 +89,7 @@ fn process(recv: Receiver<String>, sender: Sender<Block>) {
     let l = bc.last();
     sender.send(l.to_owned()).unwrap();
     if !bc.verify() {
-      return
+      return;
     }
   }
 }
@@ -114,9 +119,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
   let (_sender, receiver) = mpsc::channel();
   let (sender2, receiver2) = mpsc::channel();
-  std::thread::spawn(move || {
-    process(receiver, sender2)
-  });
+  std::thread::spawn(move || process(receiver, sender2));
 
   swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
 
@@ -129,16 +132,18 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             println!("Listening on {}:{}", address, floodsub_topic.id());
             can_make = true;
           }
-        },
+        }
         Poll::Ready(None) => return Poll::Ready(Ok(())),
         Poll::Pending => {
           if can_make {
             let recieved = receiver2.recv_timeout(Duration::from_secs_f32(0.1));
             if recieved.is_ok() {
-              swarm.behaviour_mut().report_mine(floodsub_topic.clone(), &recieved.unwrap())
+              swarm
+                .behaviour_mut()
+                .report_mine(floodsub_topic.clone(), &recieved.unwrap())
             }
           }
-          break
+          break;
         }
       }
     }
