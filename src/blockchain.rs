@@ -29,7 +29,7 @@ impl Chain {
 
   pub fn verify(&mut self) -> bool {
     for b in &self.blocks {
-      if !b.verify() {
+      if b.genesis && !b.verify() {
         return false;
       }
     }
