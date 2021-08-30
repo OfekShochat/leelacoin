@@ -141,7 +141,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
         }
         Poll::Ready(None) => return Poll::Ready(Ok(())),
         Poll::Pending => {
-          let r = event_receiver.recv_timeout(Duration::NANOSECOND);
+          let r = event_receiver.try_recv();
           if r.is_ok() {
             let r = r.unwrap();
             let mut splited = r.split(" ");
@@ -154,7 +154,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             }
           }
           if can_make {
-            let recieved = miner_receiver.recv_timeout(Duration::NANOSECOND);
+            let recieved = miner_receiver.try_recv();
             if recieved.is_ok() {
               swarm
                 .behaviour_mut()
