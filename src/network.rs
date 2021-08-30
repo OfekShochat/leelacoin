@@ -8,6 +8,11 @@ use libp2p::{
   NetworkBehaviour, PeerId, Swarm
 };
 
+use miniz_oxide::{
+  inflate::decompress_to_vec,
+  deflate::compress_to_vec
+};
+
 use serde_json::json;
 
 use crate::blockchain;
@@ -23,13 +28,16 @@ struct Client {
 
 impl Client {
   pub fn report_mine(&mut self, topic: Topic, block: &Block) {
-    self.floodsub.publish(topic, json!({
-      "report": "mined",
-      "hash": block.summary,
-      "data": block.data.to_string(),
-      "previous": block.previous_summary,
-      "nonce": block.nonce
-    }).to_string());
+    let compressed = 
+      compress_to_vec(
+        json!({
+          "report": "mined",
+          "hash": block.summary,
+          "data": block.data.to_string(),
+          "previous": block.previous_summary,
+          "nonce": block.nonce
+      }).to_string().as_bytes(), 8);
+    self.floodsub.publish(topic, compressed);
   }
 }
 
@@ -37,9 +45,10 @@ impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
   // Called when `floodsub` produces an event.
   fn inject_event(&mut self, message: FloodsubEvent) {
     if let FloodsubEvent::Message(message) = message {
+      let decompressed = decompress_to_vec(&message.data).unwrap();
       println!(
         "Received: '{:?}' from {:?}",
-        String::from_utf8_lossy(&message.data),
+        String::from_utf8_lossy(decompressed.as_slice()),
         message.source
       );
       // if its a new block, validate it yourself and if you agree then send it to all peers.
