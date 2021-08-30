@@ -1,10 +1,10 @@
-extern crate hex;
 extern crate chrono;
+extern crate hex;
 
 use self::hex::ToHex;
+use chrono::Utc;
 use serde_json::json;
 use sha3::{Digest, Sha3_256};
-use chrono::Utc;
 
 const COST: u32 = 7;
 
