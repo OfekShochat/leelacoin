@@ -1,8 +1,10 @@
 extern crate hex;
+extern crate chrono;
 
 use self::hex::ToHex;
 use serde_json::json;
 use sha3::{Digest, Sha3_256};
+use chrono::Utc;
 
 const COST: u32 = 7;
 
@@ -30,6 +32,7 @@ pub struct Block {
   pub data: DataPoint,
   pub previous_summary: String,
   pub nonce: u64,
+  pub timestamp: i64,
   pub genesis: bool,
 }
 
@@ -60,6 +63,7 @@ impl Block {
       data: DataPoint { from, to, amount },
       previous_summary: previous_hash,
       nonce,
+      timestamp: Utc::now().timestamp(),
       genesis: false,
     }
   }
@@ -74,6 +78,7 @@ impl Block {
       },
       previous_summary: "NONE".to_string(),
       nonce: 0,
+      timestamp: 0,
       genesis: false,
     }
   }
