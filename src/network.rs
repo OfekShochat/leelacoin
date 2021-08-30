@@ -15,17 +15,15 @@ use serde_json::json;
 use crate::block::Block;
 use crate::blockchain;
 
-use std::{
-  error::Error,
-  sync::mpsc::{self, Receiver, Sender},
-  task::{Context, Poll},
-  time::Duration,
-};
+use std::{error::Error, str::FromStr, sync::mpsc::{self, Receiver, Sender}, task::{Context, Poll}, time::Duration};
 
 #[derive(NetworkBehaviour)]
 struct Client {
   floodsub: Floodsub,
   mdns: Mdns,
+
+  #[behaviour(ignore)]
+  sender: Sender<String>
 }
 
 impl Client {
@@ -56,7 +54,10 @@ impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
         String::from_utf8_lossy(decompressed.as_slice()),
         message.source
       );
-      // if its a new block, validate it yourself and if you agree then send it to all peers.
+      /* 
+        check if this chain is valid.
+        If not, report it with `self.sender.send()`.
+      */
     }
   }
 }
@@ -103,6 +104,8 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
   // Set up a an encrypted DNS-enabled TCP Transport over the Mplex and Yamux protocols
   let transport = libp2p::development_transport(local_key).await?;
 
+  let (event_sender, event_receiver) = mpsc::channel();
+
   // Create a Floodsub topic
   let floodsub_topic = floodsub::Topic::new("leelacoin");
   // Create a Swarm to manage peers and events
@@ -111,15 +114,16 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     let mut behavior = Client {
       floodsub: Floodsub::new(local_peer_id),
       mdns,
+      sender: event_sender,
     };
 
     behavior.floodsub.subscribe(floodsub_topic.clone());
     Swarm::new(transport, behavior, local_peer_id)
   };
 
-  let (_sender, receiver) = mpsc::channel();
-  let (sender2, receiver2) = mpsc::channel();
-  std::thread::spawn(move || process(receiver, sender2));
+  let (_miner_to_main_sender, miner_receiver_to_main) = mpsc::channel();
+  let (miner_sender, miner_receiver) = mpsc::channel();
+  std::thread::spawn(move || process(miner_receiver_to_main, miner_sender));
 
   swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
 
@@ -135,8 +139,19 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
         }
         Poll::Ready(None) => return Poll::Ready(Ok(())),
         Poll::Pending => {
+          let r = event_receiver.recv_timeout(Duration::NANOSECOND);
+          if r.is_ok() {
+            let r = r.unwrap();
+            match r.split(" ").nth(0).unwrap() {
+              "ban" => {
+                // Messenger found fraudulent peer. ban this peer's ID.
+                swarm.ban_peer_id(PeerId::from_str(r.as_str()).unwrap())
+              }
+              _ => {}
+            }
+          }
           if can_make {
-            let recieved = receiver2.recv_timeout(Duration::from_secs_f32(0.1));
+            let recieved = miner_receiver.recv_timeout(Duration::NANOSECOND);
             if recieved.is_ok() {
               swarm
                 .behaviour_mut()
