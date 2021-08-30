@@ -40,7 +40,7 @@ impl Client {
       })
       .to_string()
       .as_bytes(),
-      8,
+      9, // best compression
     );
     self.floodsub.publish(topic, compressed);
   }
