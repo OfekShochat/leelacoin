@@ -20,7 +20,6 @@ use std::{
   str::FromStr,
   sync::mpsc::{self, Receiver, Sender},
   task::{Context, Poll},
-  time::Duration,
 };
 
 #[derive(NetworkBehaviour)]
@@ -60,10 +59,6 @@ impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
         String::from_utf8_lossy(decompressed.as_slice()),
         message.source
       );
-      /*
-        check if this chain is valid.
-        If not, report it with `self.sender.send()`.
-      */
     }
   }
 }
@@ -145,19 +140,20 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
         }
         Poll::Ready(None) => return Poll::Ready(Ok(())),
         Poll::Pending => {
-          let r = event_receiver.recv_timeout(Duration::NANOSECOND);
+          let r = event_receiver.try_recv();
           if r.is_ok() {
             let r = r.unwrap();
-            match r.split(" ").nth(0).unwrap() {
+            let mut splited = r.split(" ");
+            match splited.nth(0).unwrap() {
               "ban" => {
                 // Messenger found fraudulent peer. ban this peer's ID.
-                swarm.ban_peer_id(PeerId::from_str(r.as_str()).unwrap())
+                swarm.ban_peer_id(PeerId::from_str(splited.nth(1).unwrap()).unwrap())
               }
               _ => {}
             }
           }
           if can_make {
-            let recieved = miner_receiver.recv_timeout(Duration::NANOSECOND);
+            let recieved = miner_receiver.try_recv();
             if recieved.is_ok() {
               swarm
                 .behaviour_mut()
