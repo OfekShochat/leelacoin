@@ -10,7 +10,7 @@ use libp2p::{
 
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 
-use serde_json::{json, from_slice, Value};
+use serde_json::{from_slice, json, Value};
 
 use crate::block::{Block, DataPoint};
 use crate::blockchain;
@@ -48,8 +48,15 @@ impl Client {
     self.floodsub.publish(topic, compressed);
   }
 
-  pub fn report_transaction(&mut self, topic: Topic, from: String, to: String, amount: f64, keys: identity::Keypair) {
-    let data = DataPoint::new(from ,to, amount);
+  pub fn report_transaction(
+    &mut self,
+    topic: Topic,
+    from: String,
+    to: String,
+    amount: f64,
+    keys: identity::Keypair,
+  ) {
+    let data = DataPoint::new(from, to, amount);
     let compressed = compress_to_vec(
       json!({
         "report": "transaction",
@@ -70,11 +77,7 @@ impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
     if let FloodsubEvent::Message(message) = message {
       let decompressed = decompress_to_vec(&message.data).unwrap();
       let value = String::from_utf8_lossy(decompressed.as_slice());
-      println!(
-        "Received: '{:?}' from {:?}",
-        value,
-        message.source
-      );
+      println!("Received: '{:?}' from {:?}", value, message.source);
       let cmd: Value = from_slice(&decompressed).unwrap();
       println!("{}", cmd["nonce"]);
     }
