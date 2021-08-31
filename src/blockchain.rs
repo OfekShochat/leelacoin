@@ -19,7 +19,7 @@ impl Chain {
     &self.blocks[0]
   }
 
-  pub fn add_block(&mut self, from: String, to: String, amount: u64) {
+  pub fn add_block(&mut self, from: String, to: String, amount: f64) {
     self.prepend_block(Block::new(from, to, amount, self.last().summary.clone()));
   }
 

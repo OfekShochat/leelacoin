@@ -10,9 +10,9 @@ use libp2p::{
 
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 
-use serde_json::json;
+use serde_json::{from_slice, json, Value};
 
-use crate::block::Block;
+use crate::block::{Block, DataPoint};
 use crate::blockchain;
 
 use std::{
@@ -28,6 +28,8 @@ struct Client {
   mdns: Mdns,
 
   #[behaviour(ignore)]
+  keys: identity::Keypair,
+  #[behaviour(ignore)]
   sender: Sender<String>,
 }
 
@@ -39,13 +41,39 @@ impl Client {
         "hash": block.summary,
         "data": block.data.to_string(),
         "previous": block.previous_summary,
-        "nonce": block.nonce
+        "nonce": block.nonce,
+        "signed": self.sign(&block.data)
       })
       .to_string()
       .as_bytes(),
       9, // best compression
     );
     self.floodsub.publish(topic, compressed);
+  }
+
+  pub fn report_transaction(
+    &mut self,
+    topic: Topic,
+    from: String,
+    to: String,
+    amount: f64,
+  ) {
+    let data = DataPoint::new(from, to, amount);
+    let compressed = compress_to_vec(
+      json!({
+        "report": "transaction",
+        "data": data.to_string(),
+        "signed": self.sign(&data)
+      })
+      .to_string()
+      .as_bytes(),
+      9, // best compression
+    );
+    self.floodsub.publish(topic, compressed);
+  }
+
+  fn sign(&self, data: &DataPoint) -> Vec<u8> {
+    self.keys.sign(data.to_string().as_bytes()).unwrap()
   }
 }
 
@@ -54,11 +82,10 @@ impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
   fn inject_event(&mut self, message: FloodsubEvent) {
     if let FloodsubEvent::Message(message) = message {
       let decompressed = decompress_to_vec(&message.data).unwrap();
-      println!(
-        "Received: '{:?}' from {:?}",
-        String::from_utf8_lossy(decompressed.as_slice()),
-        message.source
-      );
+      let value = String::from_utf8_lossy(decompressed.as_slice());
+      println!("Received: '{:?}' from {:?}", value, message.source);
+      let cmd: Value = from_slice(&decompressed).unwrap();
+      println!("{}", cmd["nonce"]);
     }
   }
 }
@@ -87,7 +114,7 @@ impl NetworkBehaviourEventProcess<MdnsEvent> for Client {
 fn process(recv: Receiver<String>, sender: Sender<Block>) {
   let mut bc = blockchain::Chain::new();
   loop {
-    bc.add_block("poop".to_string(), "poopoo".to_string(), 5);
+    bc.add_block("poop".to_string(), "poopoo".to_string(), 5.0);
     let l = bc.last();
     sender.send(l.to_owned()).unwrap();
     if !bc.verify() {
@@ -103,7 +130,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
   println!("Local peer id: {:?}", local_peer_id);
 
   // Set up a an encrypted DNS-enabled TCP Transport over the Mplex and Yamux protocols
-  let transport = libp2p::development_transport(local_key).await?;
+  let transport = libp2p::development_transport(local_key.clone()).await?;
 
   let (event_sender, event_receiver) = mpsc::channel();
 
@@ -116,6 +143,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
       floodsub: Floodsub::new(local_peer_id),
       mdns,
       sender: event_sender,
+      keys: local_key,
     };
 
     behavior.floodsub.subscribe(floodsub_topic.clone());
