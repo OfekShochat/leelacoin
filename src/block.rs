@@ -16,6 +16,10 @@ pub struct DataPoint {
 }
 
 impl DataPoint {
+  pub fn new(from: String, to: String, amount: f64) -> DataPoint {
+    DataPoint { from, to, amount }
+  }
+
   pub fn to_string(&self) -> String {
     json!({
       "from": self.from,
@@ -60,7 +64,7 @@ impl Block {
 
     Block {
       summary,
-      data: DataPoint { from, to, amount },
+      data: DataPoint::new(from, to, amount),
       previous_summary: previous_hash,
       nonce,
       timestamp: Utc::now().timestamp(),

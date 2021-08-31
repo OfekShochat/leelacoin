@@ -49,11 +49,7 @@ impl Client {
   }
 
   pub fn report_transaction(&mut self, topic: Topic, from: String, to: String, amount: f64, keys: identity::Keypair) {
-    let data = DataPoint {
-      from,
-      to,
-      amount
-    };
+    let data = DataPoint::new(from ,to, amount);
     let compressed = compress_to_vec(
       json!({
         "report": "transaction",
@@ -109,7 +105,7 @@ impl NetworkBehaviourEventProcess<MdnsEvent> for Client {
 fn process(recv: Receiver<String>, sender: Sender<Block>) {
   let mut bc = blockchain::Chain::new();
   loop {
-    bc.add_block("poop".to_string(), "poopoo".to_string(), 5);
+    bc.add_block("poop".to_string(), "poopoo".to_string(), 5.0);
     let l = bc.last();
     sender.send(l.to_owned()).unwrap();
     if !bc.verify() {
