@@ -28,6 +28,8 @@ struct Client {
   mdns: Mdns,
 
   #[behaviour(ignore)]
+  keys: identity::Keypair,
+  #[behaviour(ignore)]
   sender: Sender<String>,
 }
 
@@ -39,7 +41,8 @@ impl Client {
         "hash": block.summary,
         "data": block.data.to_string(),
         "previous": block.previous_summary,
-        "nonce": block.nonce
+        "nonce": block.nonce,
+        "signed": self.sign(&block.data)
       })
       .to_string()
       .as_bytes(),
@@ -54,20 +57,23 @@ impl Client {
     from: String,
     to: String,
     amount: f64,
-    keys: identity::Keypair,
   ) {
     let data = DataPoint::new(from, to, amount);
     let compressed = compress_to_vec(
       json!({
         "report": "transaction",
         "data": data.to_string(),
-        "signed": keys.sign(data.to_string().as_bytes()).unwrap().as_slice()
+        "signed": self.sign(&data)
       })
       .to_string()
       .as_bytes(),
       9, // best compression
     );
     self.floodsub.publish(topic, compressed);
+  }
+
+  fn sign(&self, data: &DataPoint) -> Vec<u8> {
+    self.keys.sign(data.to_string().as_bytes()).unwrap()
   }
 }
 
@@ -124,7 +130,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
   println!("Local peer id: {:?}", local_peer_id);
 
   // Set up a an encrypted DNS-enabled TCP Transport over the Mplex and Yamux protocols
-  let transport = libp2p::development_transport(local_key).await?;
+  let transport = libp2p::development_transport(local_key.clone()).await?;
 
   let (event_sender, event_receiver) = mpsc::channel();
 
@@ -137,6 +143,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
       floodsub: Floodsub::new(local_peer_id),
       mdns,
       sender: event_sender,
+      keys: local_key,
     };
 
     behavior.floodsub.subscribe(floodsub_topic.clone());
