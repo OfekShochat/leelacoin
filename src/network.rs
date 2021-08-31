@@ -10,9 +10,9 @@ use libp2p::{
 
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 
-use serde_json::json;
+use serde_json::{json, from_slice, Value};
 
-use crate::block::Block;
+use crate::block::{Block, DataPoint};
 use crate::blockchain;
 
 use std::{
@@ -47,6 +47,25 @@ impl Client {
     );
     self.floodsub.publish(topic, compressed);
   }
+
+  pub fn report_transaction(&mut self, topic: Topic, from: String, to: String, amount: f64, keys: identity::Keypair) {
+    let data = DataPoint {
+      from,
+      to,
+      amount
+    };
+    let compressed = compress_to_vec(
+      json!({
+        "report": "transaction",
+        "data": data.to_string(),
+        "signed": keys.sign(data.to_string().as_bytes()).unwrap().as_slice()
+      })
+      .to_string()
+      .as_bytes(),
+      9, // best compression
+    );
+    self.floodsub.publish(topic, compressed);
+  }
 }
 
 impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
@@ -54,11 +73,14 @@ impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
   fn inject_event(&mut self, message: FloodsubEvent) {
     if let FloodsubEvent::Message(message) = message {
       let decompressed = decompress_to_vec(&message.data).unwrap();
+      let value = String::from_utf8_lossy(decompressed.as_slice());
       println!(
         "Received: '{:?}' from {:?}",
-        String::from_utf8_lossy(decompressed.as_slice()),
+        value,
         message.source
       );
+      let cmd: Value = from_slice(&decompressed).unwrap();
+      println!("{}", cmd["nonce"]);
     }
   }
 }
