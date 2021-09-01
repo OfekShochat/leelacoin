@@ -67,7 +67,7 @@ impl Client {
   }
 
   fn sign(&self, data: &DataPoint) -> Vec<u8> {
-    self.keys.sign(data.get().to_string().as_bytes()).unwrap()
+    self.keys.sign(data.to_string().as_bytes()).unwrap()
   }
 }
 

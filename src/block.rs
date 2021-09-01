@@ -27,6 +27,10 @@ impl DataPoint {
       "amount": self.amount
     })
   }
+
+  pub fn to_string(&self) -> String {
+    self.get().to_string()
+  }
 }
 
 #[derive(Clone)]
