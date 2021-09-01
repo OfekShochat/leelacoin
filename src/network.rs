@@ -15,12 +15,7 @@ use serde_json::{from_str, json, Value};
 use crate::block::{Block, DataPoint};
 use crate::blockchain;
 
-use std::{
-  error::Error,
-  str::FromStr,
-  sync::mpsc::{self, Receiver, Sender},
-  task::{Context, Poll},
-};
+use std::{error::Error, str::{FromStr, from_utf8}, sync::mpsc::{self, Receiver, Sender}, task::{Context, Poll}};
 
 #[derive(NetworkBehaviour)]
 struct Client {
@@ -42,7 +37,7 @@ impl Client {
         "data": block.data.get(),
         "previous": block.previous_summary,
         "nonce": block.nonce,
-        "signed": String::from_utf8_lossy(self.sign(&block.data).as_slice())
+        "signed": String::from_utf8_lossy(&self.sign(&block.data))
       })
       .to_string()
       .as_bytes(),
@@ -57,7 +52,7 @@ impl Client {
       json!({
         "report": "transaction",
         "data": data.get(),
-        "signed": String::from_utf8_lossy(self.sign(&data).as_slice())
+        "signed": from_utf8(&self.sign(&data)).unwrap()
       })
       .to_string()
       .as_bytes(),
