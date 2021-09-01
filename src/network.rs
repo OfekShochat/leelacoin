@@ -10,7 +10,7 @@ use libp2p::{
 
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 
-use serde_json::{from_str, json, Value};
+use serde_json::{from_slice, json, Value};
 
 use crate::block::{Block, DataPoint};
 use crate::blockchain;
@@ -76,10 +76,8 @@ impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
   fn inject_event(&mut self, message: FloodsubEvent) {
     if let FloodsubEvent::Message(message) = message {
       let decompressed = decompress_to_vec(&message.data).unwrap();
-      let value = String::from_utf8_lossy(decompressed.as_slice());
-      println!("Received: '{:?}' from {:?}", value, message.source);
-      let cmd: Value = from_str(&value).unwrap();
-      println!("{}", cmd);
+      let cmd: Value = from_slice(&decompressed).unwrap();
+      println!("Received: '{}' from {:?}", cmd, message.source);
     }
   }
 }
