@@ -3,7 +3,7 @@ extern crate hex;
 
 use self::hex::ToHex;
 use chrono::Utc;
-use serde_json::json;
+use serde_json::{json, Value};
 use sha3::{Digest, Sha3_256};
 
 const COST: u32 = 7;
@@ -20,13 +20,12 @@ impl DataPoint {
     DataPoint { from, to, amount }
   }
 
-  pub fn to_string(&self) -> String {
+  pub fn get(&self) -> Value {
     json!({
       "from": self.from,
       "to": self.to,
       "amount": self.amount
     })
-    .to_string()
   }
 }
 

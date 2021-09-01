@@ -10,7 +10,7 @@ use libp2p::{
 
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 
-use serde_json::{from_slice, json, Value};
+use serde_json::{Value, from_str, json};
 
 use crate::block::{Block, DataPoint};
 use crate::blockchain;
@@ -39,10 +39,10 @@ impl Client {
       json!({
         "report": "mined",
         "hash": block.summary,
-        "data": block.data.to_string(),
+        "data": block.data.get(),
         "previous": block.previous_summary,
         "nonce": block.nonce,
-        "signed": self.sign(&block.data)
+        "signed": String::from_utf8_lossy(self.sign(&block.data).as_slice())
       })
       .to_string()
       .as_bytes(),
@@ -62,8 +62,8 @@ impl Client {
     let compressed = compress_to_vec(
       json!({
         "report": "transaction",
-        "data": data.to_string(),
-        "signed": self.sign(&data)
+        "data": data.get(),
+        "signed": String::from_utf8_lossy(self.sign(&data).as_slice())
       })
       .to_string()
       .as_bytes(),
@@ -73,7 +73,7 @@ impl Client {
   }
 
   fn sign(&self, data: &DataPoint) -> Vec<u8> {
-    self.keys.sign(data.to_string().as_bytes()).unwrap()
+    self.keys.sign(data.get().to_string().as_bytes()).unwrap()
   }
 }
 
@@ -83,9 +83,9 @@ impl NetworkBehaviourEventProcess<FloodsubEvent> for Client {
     if let FloodsubEvent::Message(message) = message {
       let decompressed = decompress_to_vec(&message.data).unwrap();
       let value = String::from_utf8_lossy(decompressed.as_slice());
-      println!("Received: '{:?}' from {:?}", value, message.source);
-      let cmd: Value = from_slice(&decompressed).unwrap();
-      println!("{}", cmd["nonce"]);
+      println!("Received: '{:?}' from {:?}", value.to_string(), message.source);
+      let cmd: Value = from_str(&value).unwrap();
+      println!("{}", cmd);
     }
   }
 }
