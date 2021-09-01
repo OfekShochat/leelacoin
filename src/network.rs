@@ -15,7 +15,12 @@ use serde_json::{from_str, json, Value};
 use crate::block::{Block, DataPoint};
 use crate::blockchain;
 
-use std::{error::Error, str::{FromStr, from_utf8}, sync::mpsc::{self, Receiver, Sender}, task::{Context, Poll}};
+use std::{
+  error::Error,
+  str::{from_utf8, FromStr},
+  sync::mpsc::{self, Receiver, Sender},
+  task::{Context, Poll},
+};
 
 #[derive(NetworkBehaviour)]
 struct Client {
