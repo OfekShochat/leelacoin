@@ -1,9 +1,12 @@
-use std::{io::Read, net::{TcpStream, TcpListener}};
+use std::{
+  io::Read,
+  net::{TcpListener, TcpStream},
+};
 // use rand::rngs::OsRng;
-use ed25519_dalek::{Signature, Signer, Keypair};
-use serde_json::Value;
-use log::{info, error};
+use ed25519_dalek::{Keypair, Signature, Signer};
+use log::{error, info};
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
+use serde_json::Value;
 
 pub struct Listener {
   keypair: Keypair,
@@ -25,7 +28,10 @@ impl Listener {
 
   fn main(&mut self) {
     let listener = TcpListener::bind("0.0.0.0:0").unwrap();
-    info!("Listening on {}", listener.local_addr().unwrap().to_string());
+    info!(
+      "Listening on {}",
+      listener.local_addr().unwrap().to_string()
+    );
     for stream in listener.incoming() {
       match stream {
         Ok(stream) => {
@@ -34,7 +40,7 @@ impl Listener {
           let cmd: Value = serde_json::from_slice(&stripped).unwrap();
           println!("{}", cmd);
         }
-        Err(e) => error!("connection failed with {}", e)
+        Err(e) => error!("connection failed with {}", e),
       }
     }
   }
