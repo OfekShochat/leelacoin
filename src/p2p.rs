@@ -7,6 +7,7 @@ use ed25519_dalek::{Keypair, Signature, Signer};
 use log::{error, info};
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 use serde::{Deserialize, Serialize};
+use std::sync::{Mutex, Arc};
 
 use crate::block::DataPoint;
 
@@ -27,16 +28,31 @@ struct Message {
   data: Vec<DataPoint>,
 }
 
+pub struct Client {
+  contact_list: Arc<Mutex<Vec<String>>>,
+  keypair: Keypair,
+}
+
+
+impl Client {
+  pub fn new(keypair: Keypair) -> Client {
+    Client {
+      contact_list: vec![],
+      keypair
+    }
+  }
+}
+
 pub struct Listener {
   keypair: Keypair,
-  contact_list: Vec<String>,
+  contact_list: Arc<Mutex<Vec<String>>>,
 }
 
 impl Listener {
-  pub fn start(keypair: Keypair) {
+  pub fn new(keypair: Keypair, contact_list: Arc<Mutex<Vec<String>>>) {
     let mut l = Listener {
       keypair,
-      contact_list: vec![],
+      contact_list,
     };
     l.main()
   }
@@ -54,6 +70,7 @@ impl Listener {
           let stripped = self.get_message(&mut stream, &mut buf);
 
           let msg: Message = serde_json::from_slice(&stripped).unwrap();
+          println!("{:?}", msg);
           self.forward(&buf);
         }
         Err(e) => error!("connection failed with {}", e),
@@ -68,7 +85,7 @@ impl Listener {
   }
 
   fn forward(&mut self, buf: &[u8]) {
-    for peer in self.contact_list.iter() {
+    for peer in self.contact_list.lock().unwrap().iter() {
       match TcpStream::connect(&peer) {
         Ok(mut stream) => {
           send_message(&mut stream, buf);

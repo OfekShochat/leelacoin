@@ -1,7 +1,5 @@
 #![feature(duration_constants)]
 
-use std::net::TcpStream;
-
 extern crate ed25519_dalek;
 extern crate miniz_oxide;
 extern crate rand;
@@ -22,5 +20,5 @@ use rand::rngs::OsRng; // should remove
 fn main() {
   simple_logger::init().unwrap();
   let mut csprng = OsRng {};
-  p2p::Listener::start(Keypair::generate(&mut csprng))
+  p2p::Client::new(Keypair::generate(&mut csprng));
 }
