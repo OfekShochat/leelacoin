@@ -21,6 +21,7 @@ fn send_message(stream: &mut TcpStream, msg: &[u8]) {
 #[derive(Debug, Serialize, Deserialize)]
 struct Message {
   destiny: String,
+  source: String,
   pubkey: Vec<u8>,
   signed: Vec<u8>,
   data: Vec<DataPoint>,
@@ -53,7 +54,7 @@ impl Listener {
           let stripped = self.get_message(&mut stream, &mut buf);
 
           let msg: Message = serde_json::from_slice(&stripped).unwrap();
-          send_message(&mut stream, b"poop");
+          self.forward(&buf);
         }
         Err(e) => error!("connection failed with {}", e),
       }
@@ -62,7 +63,6 @@ impl Listener {
 
   fn get_message(&mut self, stream: &mut TcpStream, buf: &mut [u8; BUFFER_SIZE]) -> Vec<u8> {
     stream.read(&mut buf[..]).unwrap();
-    self.forward(buf);
     let stripped = buf.strip_suffix(b"\0").unwrap(); // removing trailing zeros
     decompress_to_vec(stripped).unwrap()
   }
