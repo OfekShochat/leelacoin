@@ -8,6 +8,7 @@ use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 use serde::{Deserialize, Serialize};
 use std::sync::{Mutex, Arc};
 use std::thread;
+use std::io::stdin;
 
 use crate::block::DataPoint;
 
@@ -52,10 +53,18 @@ impl Client {
     thread::spawn(move || {
       Listener::new(contacts);
     });
+    let mut input = String::new();
+    loop {
+      stdin().read_line(&mut input).unwrap();
+      let splitted: Vec<&str> = input.split_whitespace().collect();
+      match splitted[0] {
+        _ => eprintln!("invalid command: {}", splitted[0])
+      }
+    }
   }
 
   fn get_chain(&mut self) {
-
+    
   }
 }
 
