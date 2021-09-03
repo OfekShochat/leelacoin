@@ -5,10 +5,11 @@ use self::hex::ToHex;
 use chrono::Utc;
 use serde_json::{json, Value};
 use sha3::{Digest, Sha3_256};
+use serde::{Deserialize, Serialize};
 
 const COST: u32 = 7;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DataPoint {
   from: String,
   to: String,

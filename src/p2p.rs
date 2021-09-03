@@ -5,6 +5,8 @@ use log::{error, info};
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 use serde::{Deserialize, Serialize};
 
+use crate::block::DataPoint;
+
 pub struct Listener {
   keypair: Keypair,
 }
@@ -32,6 +34,7 @@ struct Message {
   destiny: String,
   pubkey: Vec<u8>,
   signed: Vec<u8>,
+  data: Vec<DataPoint>,
 }
 
 impl Listener {
