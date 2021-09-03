@@ -72,9 +72,23 @@ impl Client {
       stdin().read_line(&mut input).unwrap();
       let splitted: Vec<&str> = input.split_whitespace().collect();
       match splitted[0] {
+        "new-trans" => self.parse_transaction(&splitted[1..splitted.len()]),
         _ => eprintln!("invalid command: {}", splitted[0]),
       }
     }
+  }
+
+  fn parse_transaction(&mut self, splitted: &[&str]) {
+    let mut amount = "";
+    let mut to = "";
+    for i in 0..splitted.len() {
+      match splitted[i] {
+        "amm" => amount = splitted[i+1],
+        "to" => to = splitted[i+1],
+        _ => continue
+      }
+    }
+    self.create_transaction(DataPoint::new("".to_string(), to.to_string(), amount.parse().unwrap()))
   }
 
   fn create_transaction(&mut self, data: DataPoint) {
