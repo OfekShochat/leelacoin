@@ -2,7 +2,8 @@ use ed25519_dalek::{Keypair, Signature, Signer};
 use log::{error, info};
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 use serde::{Deserialize, Serialize};
-use serde_bytes;
+use serde_bytes::Bytes;
+use serde_json::{from_slice, to_string};
 use std::io::stdin;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -79,12 +80,11 @@ impl Client {
   fn create_transaction(&mut self, data: DataPoint) {
     let msg = Message {
       destiny: "create-transaction".to_string(),
-      pubkey: serde_bytes::Bytes::new(&self.keypair.public.to_bytes()).to_vec(),
-      signed: serde_bytes::Bytes::new(&self.keypair.sign(data.to_string().as_bytes()).to_bytes())
-        .to_vec(),
+      pubkey: Bytes::new(&self.keypair.public.to_bytes()).to_vec(),
+      signed: Bytes::new(&self.keypair.sign(data.to_string().as_bytes()).to_bytes()).to_vec(),
       data: vec![data],
     };
-    self.send_all(serde_json::to_string(&msg).unwrap().as_bytes());
+    self.send_all(to_string(&msg).unwrap().as_bytes());
   }
 
   fn send_all(&mut self, buf: &[u8]) {
@@ -116,7 +116,7 @@ impl Listener {
           let mut buf = [0; BUFFER_SIZE];
           let stripped = self.get_message(&mut stream, &mut buf);
 
-          let msg: Message = serde_json::from_slice(&stripped).unwrap();
+          let msg: Message = from_slice(&stripped).unwrap();
           println!("{:?}", msg);
           self.forward(&buf);
         }
