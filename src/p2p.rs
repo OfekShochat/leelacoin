@@ -1,5 +1,5 @@
 use std::{
-  io::{Error, Read, Write},
+  io::{Read, Write},
   net::{TcpListener, TcpStream},
 };
 // use rand::rngs::OsRng;
