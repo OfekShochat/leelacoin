@@ -42,9 +42,9 @@ fn forward(contact_list: std::slice::Iter<String>, buf: &[u8]) {
 fn strip_trailing(buf: &[u8]) -> &[u8] {
   let mut pos: usize = 0;
   for i in 0..buf.len() {
-    if buf[i..i+3] == [0, 0, 0] {
+    if buf[i..i + 3] == [0, 0, 0] {
       pos = i;
-      break
+      break;
     }
   }
   &buf[0..pos]
@@ -68,7 +68,11 @@ pub struct Client {
 impl Client {
   pub fn new(keypair: Keypair, boot_node: bool) -> Client {
     Client {
-      contact_list: Arc::new(Mutex::new(if boot_node {vec![]} else {BOOT_NODES.clone()})),
+      contact_list: Arc::new(Mutex::new(if boot_node {
+        vec![]
+      } else {
+        BOOT_NODES.clone()
+      })),
       keypair,
     }
   }
