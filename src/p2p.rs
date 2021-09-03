@@ -70,7 +70,7 @@ impl Listener {
           error!("couldn't connect to {} with {}", peer, e);
           continue
         }
-      };
+      }
     }
   }
 }
