@@ -8,9 +8,10 @@ use serde::{Deserialize, Serialize};
 use crate::block::DataPoint;
 
 const BUFFER_SIZE: usize = 65536;
+const COMPRESSION_LEVEL: u8 = 9;
 
 fn send_message(stream: &mut TcpStream, msg: &[u8]) {
-  let compressed = compress_to_vec(msg, 9);
+  let compressed = compress_to_vec(msg, COMPRESSION_LEVEL);
   stream.write(&compressed).unwrap();
 }
 
