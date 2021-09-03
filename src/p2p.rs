@@ -1,4 +1,7 @@
-use std::{io::{Error, Read, Write}, net::{TcpListener, TcpStream}};
+use std::{
+  io::{Error, Read, Write},
+  net::{TcpListener, TcpStream},
+};
 // use rand::rngs::OsRng;
 use ed25519_dalek::{Keypair, Signature, Signer};
 use log::{error, info};
@@ -30,7 +33,10 @@ pub struct Listener {
 
 impl Listener {
   pub fn start(keypair: Keypair) {
-    let mut l = Listener { keypair, contact_list: vec![] };
+    let mut l = Listener {
+      keypair,
+      contact_list: vec![],
+    };
     l.main()
   }
 
@@ -45,7 +51,7 @@ impl Listener {
         Ok(mut stream) => {
           let mut buf = [0; BUFFER_SIZE];
           let stripped = self.get_message(&mut stream, &mut buf);
-          
+
           let msg: Message = serde_json::from_slice(&stripped).unwrap();
           send_message(&mut stream, b"poop");
         }
@@ -69,7 +75,7 @@ impl Listener {
         }
         Err(e) => {
           error!("couldn't connect to {} with {}", peer, e);
-          continue
+          continue;
         }
       }
     }

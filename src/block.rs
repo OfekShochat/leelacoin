@@ -3,9 +3,9 @@ extern crate hex;
 
 use self::hex::ToHex;
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha3::{Digest, Sha3_256};
-use serde::{Deserialize, Serialize};
 
 const COST: u32 = 7;
 
