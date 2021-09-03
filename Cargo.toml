@@ -16,3 +16,4 @@ rand = "*"
 simple_logger = "*"
 log = "*"
 serde = { version = "1.0", features = ["derive"] }
+lazy_static = "*"

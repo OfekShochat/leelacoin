@@ -6,6 +6,8 @@ extern crate rand;
 extern crate serde_json;
 extern crate sha3;
 extern crate simple_logger;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod block;
 mod blockchain;

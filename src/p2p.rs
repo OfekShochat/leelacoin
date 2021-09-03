@@ -2,17 +2,22 @@ use std::{
   io::{Read, Write},
   net::{TcpListener, TcpStream},
 };
-// use rand::rngs::OsRng;
 use ed25519_dalek::{Keypair, Signature, Signer};
 use log::{error, info};
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 use serde::{Deserialize, Serialize};
 use std::sync::{Mutex, Arc};
+use std::thread;
 
 use crate::block::DataPoint;
 
 const BUFFER_SIZE: usize = 65536;
 const COMPRESSION_LEVEL: u8 = 9;
+lazy_static! {
+  static ref BOOT_NODES: Vec<String> = vec![
+    "127.0.0.1:8000".to_string()
+  ];
+}
 
 fn send_message(stream: &mut TcpStream, msg: &[u8]) {
   let compressed = compress_to_vec(msg, COMPRESSION_LEVEL);
@@ -37,21 +42,30 @@ pub struct Client {
 impl Client {
   pub fn new(keypair: Keypair) -> Client {
     Client {
-      contact_list: vec![],
+      contact_list: Arc::new(Mutex::new(BOOT_NODES.clone())),
       keypair
     }
+  }
+
+  pub fn main(&mut self) {
+    let contacts = Arc::clone(&self.contact_list);
+    thread::spawn(move || {
+      Listener::new(contacts);
+    });
+  }
+
+  fn get_chain(&mut self) {
+
   }
 }
 
 pub struct Listener {
-  keypair: Keypair,
   contact_list: Arc<Mutex<Vec<String>>>,
 }
 
 impl Listener {
-  pub fn new(keypair: Keypair, contact_list: Arc<Mutex<Vec<String>>>) {
+  pub fn new(contact_list: Arc<Mutex<Vec<String>>>) {
     let mut l = Listener {
-      keypair,
       contact_list,
     };
     l.main()

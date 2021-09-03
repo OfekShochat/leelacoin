@@ -192,6 +192,7 @@ dependencies = [
  "chrono",
  "ed25519-dalek",
  "hex",
+ "lazy_static",
  "log",
  "miniz_oxide",
  "once_cell",
