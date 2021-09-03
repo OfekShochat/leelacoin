@@ -83,12 +83,16 @@ impl Client {
     let mut to = "";
     for i in 0..splitted.len() {
       match splitted[i] {
-        "amm" => amount = splitted[i+1],
-        "to" => to = splitted[i+1],
-        _ => continue
+        "amm" => amount = splitted[i + 1],
+        "to" => to = splitted[i + 1],
+        _ => continue,
       }
     }
-    self.create_transaction(DataPoint::new("".to_string(), to.to_string(), amount.parse().unwrap()))
+    self.create_transaction(DataPoint::new(
+      "".to_string(),
+      to.to_string(),
+      amount.parse().unwrap(),
+    ))
   }
 
   fn create_transaction(&mut self, data: DataPoint) {
