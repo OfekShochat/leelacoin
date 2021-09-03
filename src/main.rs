@@ -22,5 +22,5 @@ use rand::rngs::OsRng; // should remove
 fn main() {
   simple_logger::init().unwrap();
   let mut csprng = OsRng {};
-  p2p::Client::new(Keypair::generate(&mut csprng)).main();
+  p2p::Client::new(Keypair::generate(&mut csprng), true).main();
 }

@@ -17,7 +17,7 @@ use crate::block::DataPoint;
 const BUFFER_SIZE: usize = 65536;
 const COMPRESSION_LEVEL: u8 = 9;
 lazy_static! {
-  static ref BOOT_NODES: Vec<String> = vec!["127.0.0.1:8000".to_string()];
+  static ref BOOT_NODES: Vec<String> = vec!["127.0.0.1:60129".to_string()];
 }
 
 fn send_message(stream: &mut TcpStream, msg: &[u8]) {
@@ -39,6 +39,17 @@ fn forward(contact_list: std::slice::Iter<String>, buf: &[u8]) {
   }
 }
 
+fn strip_trailing(buf: &[u8]) -> &[u8] {
+  let mut pos: usize = 0;
+  for i in 0..buf.len() {
+    if buf[i..i+3] == [0, 0, 0] {
+      pos = i;
+      break
+    }
+  }
+  &buf[0..pos]
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Message {
   destiny: String,
@@ -55,9 +66,9 @@ pub struct Client {
 }
 
 impl Client {
-  pub fn new(keypair: Keypair) -> Client {
+  pub fn new(keypair: Keypair, boot_node: bool) -> Client {
     Client {
-      contact_list: Arc::new(Mutex::new(BOOT_NODES.clone())),
+      contact_list: Arc::new(Mutex::new(if boot_node {vec![]} else {BOOT_NODES.clone()})),
       keypair,
     }
   }
@@ -67,8 +78,8 @@ impl Client {
     thread::spawn(move || {
       Listener::new(contacts);
     });
-    let mut input = String::new();
     loop {
+      let mut input = String::new();
       stdin().read_line(&mut input).unwrap();
       let splitted: Vec<&str> = input.split_whitespace().collect();
       match splitted[0] {
@@ -134,8 +145,8 @@ impl Listener {
           let mut buf = [0; BUFFER_SIZE];
           let stripped = self.get_message(&mut stream, &mut buf);
 
-          let msg: Message = from_slice(&stripped).unwrap();
-          println!("{:?}", msg);
+          let msg: Message = from_slice(&stripped).expect("poooo");
+          println!("msg {:?}", &msg);
           self.forward(&buf);
         }
         Err(e) => error!("connection failed with {}", e),
@@ -145,7 +156,7 @@ impl Listener {
 
   fn get_message(&mut self, stream: &mut TcpStream, buf: &mut [u8; BUFFER_SIZE]) -> Vec<u8> {
     stream.read(&mut buf[..]).unwrap();
-    let stripped = buf.strip_suffix(b"\0").unwrap(); // removing trailing zeros
+    let stripped = strip_trailing(buf); // removing trailing zeros
     decompress_to_vec(stripped).unwrap()
   }
 
