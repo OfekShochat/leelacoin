@@ -7,26 +7,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::block::DataPoint;
 
-pub struct Listener {
-  keypair: Keypair,
-}
-
 const BUFFER_SIZE: usize = 65536;
 
-fn get_message(stream: &mut TcpStream, buf: &mut [u8; BUFFER_SIZE]) -> Vec<u8> {
-  stream.read(&mut buf[..]).unwrap();
-  let stripped = buf.strip_suffix(b"\0").unwrap(); // removing trailing zeros
-  decompress_to_vec(stripped).unwrap()
-}
-
-fn send_message(stream: &mut TcpStream, msg: &[u8]) -> Result<(), Error> {
+fn send_message(stream: &mut TcpStream, msg: &[u8]) {
   let compressed = compress_to_vec(msg, 9);
-  let res = stream.write(&compressed);
-  if res.is_err() {
-    Err(res.unwrap_err())
-  } else {
-    Ok(())
-  }
+  stream.write(&compressed).unwrap();
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,9 +22,14 @@ struct Message {
   data: Vec<DataPoint>,
 }
 
+pub struct Listener {
+  keypair: Keypair,
+  contact_list: Vec<String>,
+}
+
 impl Listener {
   pub fn start(keypair: Keypair) {
-    let mut l = Listener { keypair };
+    let mut l = Listener { keypair, contact_list: vec![] };
     l.main()
   }
 
@@ -53,12 +43,34 @@ impl Listener {
       match stream {
         Ok(mut stream) => {
           let mut buf = [0; BUFFER_SIZE];
-          let stripped = get_message(&mut stream, &mut buf);
+          let stripped = self.get_message(&mut stream, &mut buf);
+          
           let msg: Message = serde_json::from_slice(&stripped).unwrap();
-          send_message(&mut stream, b"poop").unwrap();
+          send_message(&mut stream, b"poop");
         }
         Err(e) => error!("connection failed with {}", e),
       }
+    }
+  }
+
+  fn get_message(&mut self, stream: &mut TcpStream, buf: &mut [u8; BUFFER_SIZE]) -> Vec<u8> {
+    stream.read(&mut buf[..]).unwrap();
+    self.forward(buf);
+    let stripped = buf.strip_suffix(b"\0").unwrap(); // removing trailing zeros
+    decompress_to_vec(stripped).unwrap()
+  }
+
+  fn forward(&mut self, buf: &[u8]) {
+    for peer in self.contact_list.iter() {
+      match TcpStream::connect(&peer) {
+        Ok(mut stream) => {
+          send_message(&mut stream, buf);
+        }
+        Err(e) => {
+          error!("couldn't connect to {} with {}", peer, e);
+          continue
+        }
+      };
     }
   }
 }
