@@ -5,7 +5,8 @@ use std::{
 use ed25519_dalek::{Keypair, Signature, Signer};
 use log::{error, info};
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize,};
+use serde_bytes;
 use std::sync::{Mutex, Arc};
 use std::thread;
 use std::io::stdin;
@@ -25,11 +26,26 @@ fn send_message(stream: &mut TcpStream, msg: &[u8]) {
   stream.write(&compressed).unwrap();
 }
 
+fn forward(contact_list: std::slice::Iter<String>, buf: &[u8]) {
+  for peer in contact_list {
+    match TcpStream::connect(&peer) {
+      Ok(mut stream) => {
+        send_message(&mut stream, buf);
+      }
+      Err(e) => {
+        error!("couldn't connect to {} with {}", peer, e);
+        continue;
+      }
+    }
+  }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Message {
   destiny: String,
-  source: String,
+  #[serde(with = "serde_bytes")]
   pubkey: Vec<u8>,
+  #[serde(with = "serde_bytes")]
   signed: Vec<u8>,
   data: Vec<DataPoint>,
 }
@@ -61,6 +77,15 @@ impl Client {
         _ => eprintln!("invalid command: {}", splitted[0])
       }
     }
+  }
+
+  fn create_transaction(&mut self, data: DataPoint) {
+    let msg = Message {destiny: "create-transaction".to_string(), pubkey: serde_bytes::Bytes::new(&self.keypair.public.to_bytes()).to_vec(), signed: serde_bytes::Bytes::new(&self.keypair.sign(data.to_string().as_bytes()).to_bytes()).to_vec(), data: vec![data] };
+    self.send_all(serde_json::to_string(&msg).unwrap().as_bytes());
+  }
+
+  fn send_all(&mut self, buf: &[u8]) {
+    forward(self.contact_list.lock().unwrap().iter(), buf)
   }
 
   fn get_chain(&mut self) {
@@ -108,16 +133,6 @@ impl Listener {
   }
 
   fn forward(&mut self, buf: &[u8]) {
-    for peer in self.contact_list.lock().unwrap().iter() {
-      match TcpStream::connect(&peer) {
-        Ok(mut stream) => {
-          send_message(&mut stream, buf);
-        }
-        Err(e) => {
-          error!("couldn't connect to {} with {}", peer, e);
-          continue;
-        }
-      }
-    }
+    forward(self.contact_list.lock().unwrap().iter(), buf)
   }
 }
