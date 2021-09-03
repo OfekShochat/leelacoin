@@ -1,24 +1,22 @@
+use ed25519_dalek::{Keypair, Signature, Signer};
+use log::{error, info};
+use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
+use serde::{Deserialize, Serialize};
+use serde_bytes;
+use std::io::stdin;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::{
   io::{Read, Write},
   net::{TcpListener, TcpStream},
 };
-use ed25519_dalek::{Keypair, Signature, Signer};
-use log::{error, info};
-use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
-use serde::{Deserialize, Serialize,};
-use serde_bytes;
-use std::sync::{Mutex, Arc};
-use std::thread;
-use std::io::stdin;
 
 use crate::block::DataPoint;
 
 const BUFFER_SIZE: usize = 65536;
 const COMPRESSION_LEVEL: u8 = 9;
 lazy_static! {
-  static ref BOOT_NODES: Vec<String> = vec![
-    "127.0.0.1:8000".to_string()
-  ];
+  static ref BOOT_NODES: Vec<String> = vec!["127.0.0.1:8000".to_string()];
 }
 
 fn send_message(stream: &mut TcpStream, msg: &[u8]) {
@@ -55,12 +53,11 @@ pub struct Client {
   keypair: Keypair,
 }
 
-
 impl Client {
   pub fn new(keypair: Keypair) -> Client {
     Client {
       contact_list: Arc::new(Mutex::new(BOOT_NODES.clone())),
-      keypair
+      keypair,
     }
   }
 
@@ -74,13 +71,19 @@ impl Client {
       stdin().read_line(&mut input).unwrap();
       let splitted: Vec<&str> = input.split_whitespace().collect();
       match splitted[0] {
-        _ => eprintln!("invalid command: {}", splitted[0])
+        _ => eprintln!("invalid command: {}", splitted[0]),
       }
     }
   }
 
   fn create_transaction(&mut self, data: DataPoint) {
-    let msg = Message {destiny: "create-transaction".to_string(), pubkey: serde_bytes::Bytes::new(&self.keypair.public.to_bytes()).to_vec(), signed: serde_bytes::Bytes::new(&self.keypair.sign(data.to_string().as_bytes()).to_bytes()).to_vec(), data: vec![data] };
+    let msg = Message {
+      destiny: "create-transaction".to_string(),
+      pubkey: serde_bytes::Bytes::new(&self.keypair.public.to_bytes()).to_vec(),
+      signed: serde_bytes::Bytes::new(&self.keypair.sign(data.to_string().as_bytes()).to_bytes())
+        .to_vec(),
+      data: vec![data],
+    };
     self.send_all(serde_json::to_string(&msg).unwrap().as_bytes());
   }
 
@@ -88,9 +91,7 @@ impl Client {
     forward(self.contact_list.lock().unwrap().iter(), buf)
   }
 
-  fn get_chain(&mut self) {
-    
-  }
+  fn get_chain(&mut self) {}
 }
 
 pub struct Listener {
@@ -99,9 +100,7 @@ pub struct Listener {
 
 impl Listener {
   pub fn new(contact_list: Arc<Mutex<Vec<String>>>) {
-    let mut l = Listener {
-      contact_list,
-    };
+    let mut l = Listener { contact_list };
     l.main()
   }
 
