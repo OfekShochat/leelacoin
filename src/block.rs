@@ -87,7 +87,6 @@ impl Block {
         from: "NOONE".to_string(),
         to: "NOONE".to_string(),
         amount: 0.0,
-        timestamp: 0,
       },
       previous_summary: "NONE".to_string(),
       nonce: 0,
