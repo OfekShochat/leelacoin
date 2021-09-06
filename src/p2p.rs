@@ -170,8 +170,8 @@ impl Listener {
           println!("{:?}", &msg);
           if !validate_sig(&msg.pubkey, msg.data[0].to_string(), msg.signed) {
             info!(
-              "node {:x?}({}) has provided an invalid signature.",
-              &msg.pubkey,
+              "node {}... - {} has provided an invalid signature.",
+              hex::encode(&msg.pubkey)[0..10].to_string(),
               stream.peer_addr().unwrap()
             );
             self.ban(msg.pubkey);
