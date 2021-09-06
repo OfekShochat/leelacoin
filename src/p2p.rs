@@ -27,6 +27,7 @@ fn send_message(stream: &mut TcpStream, msg: &[u8]) {
 
 fn forward(contact_list: std::slice::Iter<String>, buf: &[u8]) {
   for peer in contact_list {
+    println!("{}", peer);
     match TcpStream::connect(&peer) {
       Ok(mut stream) => {
         send_message(&mut stream, buf);
@@ -138,7 +139,9 @@ impl Listener {
   }
 
   fn main(&mut self) {
-    let listener = TcpListener::bind("0.0.0.0:0").unwrap();
+    use crate::config as cfg_reader;
+    let cfg = cfg_reader::get_config();
+    let listener = TcpListener::bind(format!("0.0.0.0:{}", cfg.port)).unwrap();
     info!(
       "Listening on {}",
       listener.local_addr().unwrap().to_string()
