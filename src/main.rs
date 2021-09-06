@@ -15,7 +15,7 @@ pub mod config;
 mod network;
 pub mod p2p;
 
-use ed25519_dalek::{Keypair, Signature, Signer}; // should remove
+use ed25519_dalek::Keypair; // should remove
 use rand::rngs::OsRng; // should remove
 
 // const BOOT_NODES: [&str; 1] = ["127.0.0.1"];
