@@ -10,10 +10,10 @@ extern crate simple_logger;
 extern crate lazy_static;
 
 pub mod block;
-pub mod p2p;
-pub mod config;
 mod blockchain;
+pub mod config;
 mod network;
+pub mod p2p;
 
 use ed25519_dalek::{Keypair, Signature, Signer}; // should remove
 use rand::rngs::OsRng; // should remove
@@ -23,5 +23,9 @@ use rand::rngs::OsRng; // should remove
 fn main() {
   simple_logger::init().unwrap();
   let mut csprng = OsRng {};
-  p2p::Client::new(Keypair::generate(&mut csprng), config::get_config().boot_node).main();
+  p2p::Client::new(
+    Keypair::generate(&mut csprng),
+    config::get_config().boot_node,
+  )
+  .main();
 }
