@@ -151,8 +151,8 @@ impl Listener {
           let mut buf = [0; BUFFER_SIZE];
           let stripped = self.get_message(&mut stream, &mut buf);
 
-          let msg: Message = from_slice(&stripped).expect("poooo");
-          println!("msg {:?}", &msg);
+          let msg: Message = from_slice(&stripped).unwrap();
+          println!("{:?}", &msg);
           self.forward(&buf);
         }
         Err(e) => error!("connection failed with {}", e),
