@@ -182,13 +182,12 @@ impl Listener {
               hex::encode(&msg.pubkey)[0..10].to_string(),
               stream.peer_addr().unwrap()
             )
-          } else if !validate_sig(&msg.pubkey, msg.data[0].to_string(), msg.signed) {
+          } else if !validate_sig(&msg.pubkey, msg.data[0].to_string() + &msg.timestamp.to_string(), msg.signed) {
             info!(
               "node {}... - {} has provided an invalid signature.",
               hex::encode(&msg.pubkey)[0..10].to_string(),
               stream.peer_addr().unwrap()
-            );
-            self.ban(msg.pubkey);
+            )
           }
           self.processed.push(msg.timestamp);
           self.cleanup();
