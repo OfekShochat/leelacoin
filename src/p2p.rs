@@ -27,7 +27,6 @@ fn send_message(stream: &mut TcpStream, msg: &[u8]) {
 
 fn forward(contact_list: std::slice::Iter<String>, buf: &[u8]) {
   for peer in contact_list {
-    println!("{}", peer);
     match TcpStream::connect(&peer) {
       Ok(mut stream) => {
         send_message(&mut stream, buf);
