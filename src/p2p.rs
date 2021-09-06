@@ -77,7 +77,7 @@ impl Client {
     }
   }
 
-  pub fn main(&mut self) {
+  pub fn main(&self) {
     let contacts = Arc::clone(&self.contact_list);
     thread::spawn(move || {
       Listener::new(contacts);
@@ -93,7 +93,7 @@ impl Client {
     }
   }
 
-  fn parse_transaction(&mut self, splitted: &[&str]) {
+  fn parse_transaction(&self, splitted: &[&str]) {
     let mut amount = "";
     let mut to = "";
     for i in 0..splitted.len() {
@@ -110,7 +110,7 @@ impl Client {
     ))
   }
 
-  fn create_transaction(&mut self, data: DataPoint) {
+  fn create_transaction(&self, data: DataPoint) {
     let msg = Message {
       destiny: "create-transaction".to_string(),
       pubkey: Bytes::new(&self.keypair.public.to_bytes()).to_vec(),
@@ -120,7 +120,7 @@ impl Client {
     self.send_all(to_string(&msg).unwrap().as_bytes());
   }
 
-  fn send_all(&mut self, buf: &[u8]) {
+  fn send_all(&self, buf: &[u8]) {
     forward(self.contact_list.lock().unwrap().iter(), buf)
   }
 
