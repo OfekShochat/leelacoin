@@ -128,7 +128,13 @@ impl Client {
     let msg = Message {
       destiny: "create-transaction".to_string(),
       pubkey: Bytes::new(&self.keypair.public.to_bytes()).to_vec(),
-      signed: Bytes::new(&self.keypair.sign((data.to_string() + &current_time.to_string()).as_bytes()).to_bytes()).to_vec(),
+      signed: Bytes::new(
+        &self
+          .keypair
+          .sign((data.to_string() + &current_time.to_string()).as_bytes())
+          .to_bytes(),
+      )
+      .to_vec(),
       data: vec![data],
       timestamp: current_time,
     };
@@ -174,15 +180,18 @@ impl Listener {
 
           let msg: Message = from_slice(&stripped).unwrap();
           println!("{:?}", &msg);
-          if msg.timestamp + TTL < Utc::now().timestamp() ||
-            self.processed.contains(&msg.timestamp)
+          if msg.timestamp + TTL < Utc::now().timestamp() || self.processed.contains(&msg.timestamp)
           {
             info!(
               "node {}... - {} has provided an expired/already used timestamp.",
               hex::encode(&msg.pubkey)[0..10].to_string(),
               stream.peer_addr().unwrap()
             )
-          } else if !validate_sig(&msg.pubkey, msg.data[0].to_string() + &msg.timestamp.to_string(), msg.signed) {
+          } else if !validate_sig(
+            &msg.pubkey,
+            msg.data[0].to_string() + &msg.timestamp.to_string(),
+            msg.signed,
+          ) {
             info!(
               "node {}... - {} has provided an invalid signature.",
               hex::encode(&msg.pubkey)[0..10].to_string(),

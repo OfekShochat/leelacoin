@@ -18,11 +18,7 @@ pub struct DataPoint {
 
 impl DataPoint {
   pub fn new(from: String, to: String, amount: f64) -> DataPoint {
-    DataPoint {
-      from,
-      to,
-      amount,
-    }
+    DataPoint { from, to, amount }
   }
 
   pub fn get(&self) -> Value {
