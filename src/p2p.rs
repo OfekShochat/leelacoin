@@ -44,9 +44,8 @@ fn forward(contact_list: std::slice::Iter<String>, buf: &[u8]) {
 
 fn validate_sig(pubkey: &Vec<u8>, msg: String, signed: Vec<u8>) -> bool {
   let p = PublicKey::from_bytes(&pubkey).unwrap();
-  p.verify(msg.as_bytes(), &Signature::try_from(&signed[..]).unwrap())
-    .unwrap();
-  true
+  let r = p.verify(msg.as_bytes(), &Signature::try_from(&signed[..]).unwrap());
+  r.is_ok()
 }
 
 fn strip_trailing(buf: &[u8]) -> &[u8] {
