@@ -165,7 +165,7 @@ impl Listener {
           let msg: Message = from_slice(&stripped).unwrap();
           println!("{:?}", &msg);
           if !validate_sig(&msg.pubkey, msg.data[0].to_string(), msg.signed) {
-            info!("node {:x?} has provided an invalid signature.", &msg.pubkey);
+            info!("node {:x?}({}) has provided an invalid signature.", &msg.pubkey, stream.peer_addr().unwrap());
             self.ban(msg.pubkey);
           }
           self.forward(&buf);
