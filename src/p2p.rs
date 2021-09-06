@@ -40,9 +40,9 @@ fn forward(contact_list: std::slice::Iter<String>, buf: &[u8]) {
   }
 }
 
-fn validate_sig(pubkey: Vec<u8>, msg: String, signed: Vec<u8>) -> bool {
+fn validate_sig(pubkey: &Vec<u8>, msg: String, signed: Vec<u8>) -> bool {
   let p = PublicKey::from_bytes(&pubkey).unwrap();
-  p.verify(msg.as_bytes(), &Signature::try_from(&signed[..]).unwrap());
+  p.verify(msg.as_bytes(), &Signature::try_from(&signed[..]).unwrap()).unwrap();
   true
 }
 
@@ -69,6 +69,7 @@ struct Message {
 
 pub struct Client {
   contact_list: Arc<Mutex<Vec<String>>>,
+  banned_list: Arc<Mutex<Vec<Vec<u8>>>>,
   keypair: Keypair,
 }
 
@@ -80,14 +81,16 @@ impl Client {
       } else {
         BOOT_NODES.clone()
       })),
+      banned_list: Arc::new(Mutex::new(vec![])),
       keypair,
     }
   }
 
   pub fn main(&self) {
     let contacts = Arc::clone(&self.contact_list);
+    let banned = Arc::clone(&self.banned_list);
     thread::spawn(move || {
-      Listener::new(contacts);
+      Listener::new(contacts, banned);
     });
     loop {
       let mut input = String::new();
@@ -136,11 +139,12 @@ impl Client {
 
 pub struct Listener {
   contact_list: Arc<Mutex<Vec<String>>>,
+  banned_list: Arc<Mutex<Vec<Vec<u8>>>>
 }
 
 impl Listener {
-  pub fn new(contact_list: Arc<Mutex<Vec<String>>>) {
-    let mut l = Listener { contact_list };
+  pub fn new(contact_list: Arc<Mutex<Vec<String>>>, banned_list: Arc<Mutex<Vec<Vec<u8>>>>) {
+    let mut l = Listener { contact_list, banned_list };
     l.main()
   }
 
@@ -160,12 +164,19 @@ impl Listener {
 
           let msg: Message = from_slice(&stripped).unwrap();
           println!("{:?}", &msg);
-          println!("{}", validate_sig(msg.pubkey, msg.data[0].to_string(), msg.signed));
+          if !validate_sig(&msg.pubkey, msg.data[0].to_string(), msg.signed) {
+            info!("node {:x?} has provided an invalid signature.", &msg.pubkey);
+            self.ban(msg.pubkey);
+          }
           self.forward(&buf);
         }
         Err(e) => error!("connection failed with {}", e),
       }
     }
+  }
+
+  fn ban(&mut self, pubkey: Vec<u8>) {
+    self.banned_list.lock().unwrap().push(pubkey)
   }
 
   fn get_message(&mut self, stream: &mut TcpStream, buf: &mut [u8; BUFFER_SIZE]) -> Vec<u8> {
