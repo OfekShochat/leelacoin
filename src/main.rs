@@ -1,5 +1,3 @@
-#![feature(duration_constants)]
-
 extern crate ed25519_dalek;
 extern crate miniz_oxide;
 extern crate rand;
@@ -15,10 +13,8 @@ pub mod config;
 mod network;
 pub mod p2p;
 
-use ed25519_dalek::Keypair; // should remove
-use rand::rngs::OsRng; // should remove
-
-// const BOOT_NODES: [&str; 1] = ["127.0.0.1"];
+use ed25519_dalek::Keypair;
+use rand::rngs::OsRng;
 
 fn main() {
   simple_logger::init().unwrap();
