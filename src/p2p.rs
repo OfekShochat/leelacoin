@@ -12,11 +12,13 @@ use std::{
   io::{Read, Write},
   net::{TcpListener, TcpStream},
 };
+use chrono::Utc;
 
 use crate::block::DataPoint;
 
 const BUFFER_SIZE: usize = 65536;
 const COMPRESSION_LEVEL: u8 = 9;
+const TTL: i64 = 3600;
 lazy_static! {
   static ref BOOT_NODES: Vec<String> = vec!["127.0.0.1:60129".to_string()];
 }
@@ -141,6 +143,7 @@ impl Client {
 pub struct Listener {
   contact_list: Arc<Mutex<Vec<String>>>,
   banned_list: Arc<Mutex<Vec<Vec<u8>>>>,
+  processed: Vec<i64>,
 }
 
 impl Listener {
@@ -148,6 +151,7 @@ impl Listener {
     let mut l = Listener {
       contact_list,
       banned_list,
+      processed: vec![],
     };
     l.main()
   }
@@ -168,7 +172,12 @@ impl Listener {
 
           let msg: Message = from_slice(&stripped).unwrap();
           println!("{:?}", &msg);
-          if !validate_sig(&msg.pubkey, msg.data[0].to_string(), msg.signed) {
+          if msg.data[0].timestamp + TTL < Utc::now().timestamp() || self.processed.contains(&msg.data[0].timestamp) {
+            info!(
+              "node {}... - {} has provided an expired/already used timestamp.",
+              hex::encode(&msg.pubkey)[0..10].to_string(),
+              stream.peer_addr().unwrap())
+          } else if !validate_sig(&msg.pubkey, msg.data[0].to_string(), msg.signed) {
             info!(
               "node {}... - {} has provided an invalid signature.",
               hex::encode(&msg.pubkey)[0..10].to_string(),
@@ -176,6 +185,8 @@ impl Listener {
             );
             self.ban(msg.pubkey);
           }
+          self.processed.push(msg.data[0].timestamp);
+          self.cleanup();
           self.forward(&buf);
         }
         Err(e) => error!("connection failed with {}", e),
@@ -185,6 +196,16 @@ impl Listener {
 
   fn ban(&mut self, pubkey: Vec<u8>) {
     self.banned_list.lock().unwrap().push(pubkey)
+  }
+
+  fn cleanup(&mut self) {
+    for i in 0..self.processed.len() {
+      if self.processed[i] + TTL < Utc::now().timestamp() {
+        self.processed.remove(i);
+      } else {
+        break // the vector is sorted, so if the current one is above TTL then the following ones will too.
+      }
+    }
   }
 
   fn get_message(&mut self, stream: &mut TcpStream, buf: &mut [u8; BUFFER_SIZE]) -> Vec<u8> {

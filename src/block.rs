@@ -14,18 +14,20 @@ pub struct DataPoint {
   from: String,
   to: String,
   amount: f64,
+  pub timestamp: i64
 }
 
 impl DataPoint {
   pub fn new(from: String, to: String, amount: f64) -> DataPoint {
-    DataPoint { from, to, amount }
+    DataPoint { from, to, amount, timestamp: Utc::now().timestamp() }
   }
 
   pub fn get(&self) -> Value {
     json!({
       "from": self.from,
       "to": self.to,
-      "amount": self.amount
+      "amount": self.amount,
+      "timestamp": self.timestamp,
     })
   }
 
@@ -83,6 +85,7 @@ impl Block {
         from: "NOONE".to_string(),
         to: "NOONE".to_string(),
         amount: 0.0,
+        timestamp: 0,
       },
       previous_summary: "NONE".to_string(),
       nonce: 0,
