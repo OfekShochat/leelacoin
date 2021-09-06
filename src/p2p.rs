@@ -1,3 +1,4 @@
+use chrono::Utc;
 use ed25519_dalek::{Keypair, PublicKey, Signature, Signer, Verifier};
 use log::{error, info};
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
@@ -12,7 +13,6 @@ use std::{
   io::{Read, Write},
   net::{TcpListener, TcpStream},
 };
-use chrono::Utc;
 
 use crate::block::DataPoint;
 
@@ -172,11 +172,14 @@ impl Listener {
 
           let msg: Message = from_slice(&stripped).unwrap();
           println!("{:?}", &msg);
-          if msg.data[0].timestamp + TTL < Utc::now().timestamp() || self.processed.contains(&msg.data[0].timestamp) {
+          if msg.data[0].timestamp + TTL < Utc::now().timestamp() ||
+            self.processed.contains(&msg.data[0].timestamp)
+          {
             info!(
               "node {}... - {} has provided an expired/already used timestamp.",
               hex::encode(&msg.pubkey)[0..10].to_string(),
-              stream.peer_addr().unwrap())
+              stream.peer_addr().unwrap()
+            )
           } else if !validate_sig(&msg.pubkey, msg.data[0].to_string(), msg.signed) {
             info!(
               "node {}... - {} has provided an invalid signature.",
@@ -203,7 +206,7 @@ impl Listener {
       if self.processed[i] + TTL < Utc::now().timestamp() {
         self.processed.remove(i);
       } else {
-        break // the vector is sorted, so if the current one is above TTL then the following ones will too.
+        break; // the vector is sorted, so if the current one is above TTL then the following ones will too.
       }
     }
   }

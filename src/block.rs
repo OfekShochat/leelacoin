@@ -14,12 +14,17 @@ pub struct DataPoint {
   from: String,
   to: String,
   amount: f64,
-  pub timestamp: i64
+  pub timestamp: i64,
 }
 
 impl DataPoint {
   pub fn new(from: String, to: String, amount: f64) -> DataPoint {
-    DataPoint { from, to, amount, timestamp: Utc::now().timestamp() }
+    DataPoint {
+      from,
+      to,
+      amount,
+      timestamp: Utc::now().timestamp(),
+    }
   }
 
   pub fn get(&self) -> Value {
