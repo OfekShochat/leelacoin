@@ -1,0 +1,6 @@
+use timestamp as sessionID.
+that includes not putting it in the transaction data, but in the req itself.
+include it in the signing data and save the signature for future verification.
+that shouldnt be so expensive cuz lets say our TTL is 3600. 512 bits per signature and lets say 10 transactions per second.
+512 * 3600 * 10 = 18432000 bits
+which is 2.3(04) megabytes.
