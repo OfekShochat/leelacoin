@@ -14,7 +14,6 @@ pub struct DataPoint {
   from: String,
   to: String,
   amount: f64,
-  pub timestamp: i64,
 }
 
 impl DataPoint {
@@ -23,7 +22,6 @@ impl DataPoint {
       from,
       to,
       amount,
-      timestamp: Utc::now().timestamp(),
     }
   }
 
@@ -32,7 +30,6 @@ impl DataPoint {
       "from": self.from,
       "to": self.to,
       "amount": self.amount,
-      "timestamp": self.timestamp,
     })
   }
 

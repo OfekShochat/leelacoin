@@ -68,6 +68,7 @@ struct Message {
   #[serde(with = "serde_bytes")]
   signed: Vec<u8>,
   data: Vec<DataPoint>,
+  timestamp: i64,
 }
 
 pub struct Client {
@@ -124,11 +125,13 @@ impl Client {
   }
 
   fn create_transaction(&self, data: DataPoint) {
+    let current_time = Utc::now().timestamp();
     let msg = Message {
       destiny: "create-transaction".to_string(),
       pubkey: Bytes::new(&self.keypair.public.to_bytes()).to_vec(),
-      signed: Bytes::new(&self.keypair.sign(data.to_string().as_bytes()).to_bytes()).to_vec(),
+      signed: Bytes::new(&self.keypair.sign((data.to_string() + &current_time.to_string()).as_bytes()).to_bytes()).to_vec(),
       data: vec![data],
+      timestamp: current_time,
     };
     self.send_all(to_string(&msg).unwrap().as_bytes());
   }
@@ -172,8 +175,8 @@ impl Listener {
 
           let msg: Message = from_slice(&stripped).unwrap();
           println!("{:?}", &msg);
-          if msg.data[0].timestamp + TTL < Utc::now().timestamp() ||
-            self.processed.contains(&msg.data[0].timestamp)
+          if msg.timestamp + TTL < Utc::now().timestamp() ||
+            self.processed.contains(&msg.timestamp)
           {
             info!(
               "node {}... - {} has provided an expired/already used timestamp.",
@@ -188,7 +191,7 @@ impl Listener {
             );
             self.ban(msg.pubkey);
           }
-          self.processed.push(msg.data[0].timestamp);
+          self.processed.push(msg.timestamp);
           self.cleanup();
           self.forward(&buf);
         }
