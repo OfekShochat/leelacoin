@@ -1,4 +1,4 @@
-use ed25519_dalek::{Keypair, Signature, Signer};
+use ed25519_dalek::{Keypair, Signature, Signer, PublicKey, Verifier};
 use log::{error, info};
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 use serde::{Deserialize, Serialize};
@@ -11,6 +11,7 @@ use std::{
   io::{Read, Write},
   net::{TcpListener, TcpStream},
 };
+use std::convert::TryFrom;
 
 use crate::block::DataPoint;
 
@@ -37,6 +38,12 @@ fn forward(contact_list: std::slice::Iter<String>, buf: &[u8]) {
       }
     }
   }
+}
+
+fn validate_sig(pubkey: Vec<u8>, msg: String, signed: Vec<u8>) -> bool {
+  let p = PublicKey::from_bytes(&pubkey).unwrap();
+  p.verify(msg.as_bytes(), &Signature::try_from(&signed[..]).unwrap());
+  true
 }
 
 fn strip_trailing(buf: &[u8]) -> &[u8] {
@@ -153,6 +160,7 @@ impl Listener {
 
           let msg: Message = from_slice(&stripped).unwrap();
           println!("{:?}", &msg);
+          println!("{}", validate_sig(msg.pubkey, msg.data[0].to_string(), msg.signed));
           self.forward(&buf);
         }
         Err(e) => error!("connection failed with {}", e),
