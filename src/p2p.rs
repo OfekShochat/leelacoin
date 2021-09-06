@@ -1,9 +1,10 @@
-use ed25519_dalek::{Keypair, Signature, Signer, PublicKey, Verifier};
+use ed25519_dalek::{Keypair, PublicKey, Signature, Signer, Verifier};
 use log::{error, info};
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 use serde::{Deserialize, Serialize};
 use serde_bytes::Bytes;
 use serde_json::{from_slice, to_string};
+use std::convert::TryFrom;
 use std::io::stdin;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -11,7 +12,6 @@ use std::{
   io::{Read, Write},
   net::{TcpListener, TcpStream},
 };
-use std::convert::TryFrom;
 
 use crate::block::DataPoint;
 
@@ -42,7 +42,8 @@ fn forward(contact_list: std::slice::Iter<String>, buf: &[u8]) {
 
 fn validate_sig(pubkey: &Vec<u8>, msg: String, signed: Vec<u8>) -> bool {
   let p = PublicKey::from_bytes(&pubkey).unwrap();
-  p.verify(msg.as_bytes(), &Signature::try_from(&signed[..]).unwrap()).unwrap();
+  p.verify(msg.as_bytes(), &Signature::try_from(&signed[..]).unwrap())
+    .unwrap();
   true
 }
 
@@ -139,12 +140,15 @@ impl Client {
 
 pub struct Listener {
   contact_list: Arc<Mutex<Vec<String>>>,
-  banned_list: Arc<Mutex<Vec<Vec<u8>>>>
+  banned_list: Arc<Mutex<Vec<Vec<u8>>>>,
 }
 
 impl Listener {
   pub fn new(contact_list: Arc<Mutex<Vec<String>>>, banned_list: Arc<Mutex<Vec<Vec<u8>>>>) {
-    let mut l = Listener { contact_list, banned_list };
+    let mut l = Listener {
+      contact_list,
+      banned_list,
+    };
     l.main()
   }
 
@@ -165,7 +169,11 @@ impl Listener {
           let msg: Message = from_slice(&stripped).unwrap();
           println!("{:?}", &msg);
           if !validate_sig(&msg.pubkey, msg.data[0].to_string(), msg.signed) {
-            info!("node {:x?}({}) has provided an invalid signature.", &msg.pubkey, stream.peer_addr().unwrap());
+            info!(
+              "node {:x?}({}) has provided an invalid signature.",
+              &msg.pubkey,
+              stream.peer_addr().unwrap()
+            );
             self.ban(msg.pubkey);
           }
           self.forward(&buf);
