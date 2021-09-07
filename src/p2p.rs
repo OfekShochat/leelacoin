@@ -18,7 +18,7 @@ use crate::block::DataPoint;
 
 const BUFFER_SIZE: usize = 65536;
 const COMPRESSION_LEVEL: u8 = 9;
-const TTL: i64 = 3600;
+const TTL: usize = 3600;
 lazy_static! {
   static ref BOOT_NODES: Vec<String> = vec!["127.0.0.1:60129".to_string()];
 }
@@ -42,7 +42,7 @@ fn forward(contact_list: std::slice::Iter<String>, buf: &[u8]) {
   }
 }
 
-fn validate_sig(pubkey: &Vec<u8>, msg: String, signed: Vec<u8>) -> bool {
+fn validate_sig(pubkey: &Vec<u8>, msg: String, signed: &Vec<u8>) -> bool {
   let p = PublicKey::from_bytes(&pubkey).unwrap();
   let r = p.verify(msg.as_bytes(), &Signature::try_from(&signed[..]).unwrap());
   r.is_ok()
@@ -162,7 +162,7 @@ impl Client {
 pub struct Listener {
   contact_list: Arc<Mutex<Vec<String>>>,
   banned_list: Arc<Mutex<Vec<Vec<u8>>>>,
-  processed: Vec<i64>,
+  processed: Vec<Vec<u8>>,
 }
 
 impl Listener {
@@ -193,7 +193,7 @@ impl Listener {
           println!("{:?}", &msg);
           if self.banned_list.lock().unwrap().contains(&msg.pubkey) {
             continue;
-          } else if msg.timestamp + TTL < Utc::now().timestamp() || self.processed.contains(&msg.timestamp)
+          } else if msg.timestamp + (TTL as i64) < Utc::now().timestamp() || self.processed.contains(&msg.signed)
           {
             info!(
               "node {}... - {} has provided an expired/already used timestamp.",
@@ -203,7 +203,7 @@ impl Listener {
           } else if !validate_sig(
             &msg.pubkey,
             msg.data[0].to_string() + &msg.timestamp.to_string(),
-            msg.signed,
+            &msg.signed,
           ) {
             info!(
               "node {}... - {} has provided an invalid signature.",
@@ -211,7 +211,7 @@ impl Listener {
               stream.peer_addr().unwrap()
             )
           }
-          self.processed.push(msg.timestamp);
+          self.processed.push(msg.signed);
           self.cleanup();
           self.forward(&buf);
         }
@@ -225,12 +225,8 @@ impl Listener {
   }
 
   fn cleanup(&mut self) {
-    for i in 0..self.processed.len() {
-      if self.processed[i] + TTL < Utc::now().timestamp() {
-        self.processed.remove(i);
-      } else {
-        break; // the vector is sorted, so if the current one is above TTL then the following ones will too.
-      }
+    while self.processed.len() > TTL {
+      self.processed.remove(0);
     }
   }
 
