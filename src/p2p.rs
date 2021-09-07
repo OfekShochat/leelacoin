@@ -101,6 +101,7 @@ impl Client {
       let splitted: Vec<&str> = input.split_whitespace().collect();
       match splitted[0] {
         "new-trans" => self.parse_transaction(&splitted[1..splitted.len()]),
+        "get-chain" => self.get_chain(),
         _ => eprintln!("invalid command: {}", splitted[0]),
       }
     }
@@ -145,7 +146,17 @@ impl Client {
     forward(self.contact_list.lock().unwrap().iter(), buf)
   }
 
-  fn get_chain(&mut self) {}
+  fn get_chain(&self) {
+    let current_time = Utc::now().timestamp();
+    let msg = Message {
+      destiny: "get-chain".to_string(),
+      pubkey: Bytes::new(&self.keypair.public.to_bytes()).to_vec(),
+      signed: Bytes::new(b"NONE").to_vec(),
+      data: vec![],
+      timestamp: current_time,
+    };
+    self.send_all(to_string(&msg).unwrap().as_bytes())
+  }
 }
 
 pub struct Listener {
@@ -180,7 +191,9 @@ impl Listener {
 
           let msg: Message = from_slice(&stripped).unwrap();
           println!("{:?}", &msg);
-          if msg.timestamp + TTL < Utc::now().timestamp() || self.processed.contains(&msg.timestamp)
+          if self.banned_list.lock().unwrap().contains(&msg.pubkey) {
+            continue;
+          } else if msg.timestamp + TTL < Utc::now().timestamp() || self.processed.contains(&msg.timestamp)
           {
             info!(
               "node {}... - {} has provided an expired/already used timestamp.",
