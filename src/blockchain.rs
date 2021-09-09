@@ -35,4 +35,16 @@ impl Chain {
     }
     true
   }
+
+  pub fn check_balance(&mut self, pubkey: String) -> f64 {
+    let mut b = 0.0;
+    for i in &self.blocks {
+      if i.data.from == pubkey {
+        b -= i.data.amount;
+      } else if i.data.to == pubkey {
+        b += i.data.amount;
+      }
+    }
+    b
+  }
 }

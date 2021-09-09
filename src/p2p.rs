@@ -13,8 +13,10 @@ use std::{
   io::{Read, Write},
   net::{TcpListener, TcpStream},
 };
+use hex::ToHex;
 
 use crate::block::DataPoint;
+use crate::blockchain::Chain;
 
 const BUFFER_SIZE: usize = 65536;
 const COMPRESSION_LEVEL: u8 = 9;
@@ -73,6 +75,7 @@ struct Message {
 pub struct Client {
   contact_list: Arc<Mutex<Vec<String>>>,
   banned_list: Arc<Mutex<Vec<Vec<u8>>>>,
+  chain: Arc<Mutex<Chain>>,
   keypair: Keypair,
 }
 
@@ -86,14 +89,16 @@ impl Client {
       })),
       banned_list: Arc::new(Mutex::new(vec![])),
       keypair,
+      chain: Arc::new(Mutex::new(Chain::new()))
     }
   }
 
   pub fn main(&self) {
     let contacts = Arc::clone(&self.contact_list);
     let banned = Arc::clone(&self.banned_list);
+    let chain = Arc::clone(&self.chain);
     thread::spawn(move || {
-      Listener::new(contacts, banned);
+      Listener::new(contacts, banned, chain);
     });
     loop {
       let mut input = String::new();
@@ -162,15 +167,17 @@ impl Client {
 pub struct Listener {
   contact_list: Arc<Mutex<Vec<String>>>,
   banned_list: Arc<Mutex<Vec<Vec<u8>>>>,
+  chain: Arc<Mutex<Chain>>,
   processed: Vec<Vec<u8>>,
 }
 
 impl Listener {
-  pub fn new(contact_list: Arc<Mutex<Vec<String>>>, banned_list: Arc<Mutex<Vec<Vec<u8>>>>) {
+  pub fn new(contact_list: Arc<Mutex<Vec<String>>>, banned_list: Arc<Mutex<Vec<Vec<u8>>>>, chain: Arc<Mutex<Chain>>) {
     let mut l = Listener {
       contact_list,
       banned_list,
       processed: vec![],
+      chain
     };
     l.main()
   }
@@ -210,6 +217,8 @@ impl Listener {
               hex::encode(&msg.pubkey)[0..10].to_string(),
               stream.peer_addr().unwrap()
             )
+          } else {
+            self.process_ok(&msg)
           }
           self.processed.push(msg.signed);
           self.cleanup();
@@ -217,6 +226,18 @@ impl Listener {
         }
         Err(e) => error!("connection failed with {}", e),
       }
+    }
+  }
+
+  fn process_ok(&mut self, msg: &Message) {
+    match msg.destiny.as_str() {
+      "create-transaction" => {
+        self.chain.lock().unwrap().check_balance(msg.pubkey.encode_hex());
+      }
+      "get-chain" => {
+        // self.chain.lock().unwrap().blocks
+      }
+      _ => {}
     }
   }
 

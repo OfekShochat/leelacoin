@@ -7,13 +7,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha3::{Digest, Sha3_256};
 
-const COST: u32 = 7;
+const COST: usize = 7;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DataPoint {
-  from: String,
-  to: String,
-  amount: f64,
+  pub from: String,
+  pub to: String,
+  pub amount: f64,
 }
 
 impl DataPoint {
@@ -54,7 +54,7 @@ fn hash(data: &String) -> String {
 fn hash_with_cost(data: String) -> (String, u64) {
   let mut h = "".to_string();
   let mut nonce = 0;
-  while !h.starts_with(&"0".repeat(COST as usize)) {
+  while !h.starts_with(&"0".repeat(COST)) {
     nonce += 1;
     h = hash(&(data.to_string() + &nonce.to_string()));
   }
