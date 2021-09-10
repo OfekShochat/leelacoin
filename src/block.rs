@@ -34,7 +34,7 @@ impl DataPoint {
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Block {
   pub summary: String,
   pub data: DataPoint,

@@ -13,7 +13,6 @@ use std::{
   io::{Read, Write},
   net::{TcpListener, TcpStream},
 };
-use hex::ToHex;
 
 use crate::block::DataPoint;
 use crate::blockchain::Chain;
@@ -206,19 +205,29 @@ impl Listener {
               "node {}... - {} has provided an expired/already used timestamp.",
               hex::encode(&msg.pubkey)[0..10].to_string(),
               stream.peer_addr().unwrap()
-            )
-          } else if !validate_sig(
-            &msg.pubkey,
-            msg.data[0].to_string() + &msg.timestamp.to_string(),
-            &msg.signed,
-          ) {
-            info!(
-              "node {}... - {} has provided an invalid signature.",
-              hex::encode(&msg.pubkey)[0..10].to_string(),
-              stream.peer_addr().unwrap()
-            )
-          } else {
-            self.process_ok(&msg)
+            );
+            continue;
+          }
+          match msg.destiny.as_str() {
+            "create-transaction" => {
+              if !validate_sig(
+                &msg.pubkey,
+                msg.data[0].to_string() + &msg.timestamp.to_string(),
+                &msg.signed,
+              ) {
+                info!(
+                  "node {}... - {} has provided an invalid signature.",
+                  hex::encode(&msg.pubkey)[0..10].to_string(),
+                  stream.peer_addr().unwrap()
+                );
+                continue;
+              }
+              // self.create_transaction(msg)
+            }
+            "get-chain" => {
+              println!("{}", self.chain.lock().unwrap().to_string());
+            }
+            _ => error!("hey")
           }
           self.processed.push(msg.signed);
           self.cleanup();
@@ -226,18 +235,6 @@ impl Listener {
         }
         Err(e) => error!("connection failed with {}", e),
       }
-    }
-  }
-
-  fn process_ok(&mut self, msg: &Message) {
-    match msg.destiny.as_str() {
-      "create-transaction" => {
-        self.chain.lock().unwrap().check_balance(msg.pubkey.encode_hex());
-      }
-      "get-chain" => {
-        // self.chain.lock().unwrap().blocks
-      }
-      _ => {}
     }
   }
 

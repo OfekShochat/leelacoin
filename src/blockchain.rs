@@ -1,4 +1,5 @@
 use crate::block::Block;
+use serde_json::to_string;
 
 pub struct Chain {
   pub blocks: Vec<Block>,
@@ -46,5 +47,13 @@ impl Chain {
       }
     }
     b
+  }
+
+  pub fn to_string(&mut self) -> String {
+    let mut out = "".to_string();
+    for i in &self.blocks {
+      out += &to_string(i).unwrap()
+    }
+    out
   }
 }
