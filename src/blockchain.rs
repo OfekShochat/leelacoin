@@ -49,10 +49,10 @@ impl Chain {
     b
   }
 
-  pub fn to_string(&mut self) -> String {
-    let mut out = "".to_string();
+  pub fn to_string(&mut self) -> Vec<String> {
+    let mut out = vec![];
     for i in &self.blocks {
-      out += &to_string(i).unwrap()
+      out.push(to_string(i).unwrap());
     }
     out
   }
