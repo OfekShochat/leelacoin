@@ -88,7 +88,7 @@ impl Client {
       })),
       banned_list: Arc::new(Mutex::new(vec![])),
       keypair,
-      chain: Arc::new(Mutex::new(Chain::new()))
+      chain: Arc::new(Mutex::new(Chain::new())),
     }
   }
 
@@ -171,12 +171,16 @@ pub struct Listener {
 }
 
 impl Listener {
-  pub fn new(contact_list: Arc<Mutex<Vec<String>>>, banned_list: Arc<Mutex<Vec<Vec<u8>>>>, chain: Arc<Mutex<Chain>>) {
+  pub fn new(
+    contact_list: Arc<Mutex<Vec<String>>>,
+    banned_list: Arc<Mutex<Vec<Vec<u8>>>>,
+    chain: Arc<Mutex<Chain>>,
+  ) {
     let mut l = Listener {
       contact_list,
       banned_list,
       processed: vec![],
-      chain
+      chain,
     };
     l.main()
   }
@@ -199,7 +203,8 @@ impl Listener {
           println!("{:?}", &msg);
           if self.banned_list.lock().unwrap().contains(&msg.pubkey) {
             continue;
-          } else if msg.timestamp + (TTL as i64) < Utc::now().timestamp() || self.processed.contains(&msg.signed)
+          } else if msg.timestamp + (TTL as i64) < Utc::now().timestamp() ||
+            self.processed.contains(&msg.signed)
           {
             info!(
               "node {}... - {} has provided an expired/already used timestamp.",
@@ -227,7 +232,7 @@ impl Listener {
             "get-chain" => {
               println!("{}", self.chain.lock().unwrap().to_string());
             }
-            _ => error!("hey")
+            _ => error!("hey"),
           }
           self.processed.push(msg.signed);
           self.cleanup();
