@@ -13,6 +13,7 @@ use std::{
   io::{Read, Write},
   net::{TcpListener, TcpStream},
 };
+use hex::ToHex;
 
 use crate::block::DataPoint;
 use crate::blockchain::Chain;
@@ -227,6 +228,8 @@ impl Listener {
                 );
                 continue;
               }
+              self.chain.lock().unwrap().add_block(msg.pubkey.encode_hex(), msg.data[0].to.to_string(), 1.0);
+              println!("{}", self.chain.lock().unwrap().to_string());
               // self.create_transaction(msg)
             }
             "get-chain" => {
