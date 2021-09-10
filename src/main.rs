@@ -10,7 +10,6 @@ extern crate lazy_static;
 pub mod block;
 mod blockchain;
 pub mod config;
-mod network;
 pub mod p2p;
 
 use ed25519_dalek::Keypair;
