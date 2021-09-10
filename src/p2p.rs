@@ -228,7 +228,8 @@ impl Listener {
                 );
                 continue;
               }
-              self.chain.lock().unwrap().add_block(msg.pubkey.encode_hex(), msg.data[0].to.to_string(), 1.0);
+              println!("{}", self.chain.lock().unwrap().check_balance(msg.pubkey.encode_hex()));
+              self.chain.lock().unwrap().add_block(msg.pubkey.encode_hex(), msg.data[0].to.to_string(), msg.data[0].amount);
               println!("{}", self.chain.lock().unwrap().to_string());
               // self.create_transaction(msg)
             }
