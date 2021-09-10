@@ -204,16 +204,15 @@ impl Listener {
           println!("{:?}", &msg);
           if self.banned_list.lock().unwrap().contains(&msg.pubkey) {
             continue;
-          } else if msg.timestamp + (TTL as i64) < Utc::now().timestamp() ||
-            self.processed.contains(&msg.signed)
-          {
-            info!(
-              "node {}... - {} has provided an expired/already used timestamp.",
-              hex::encode(&msg.pubkey)[0..10].to_string(),
-              stream.peer_addr().unwrap()
-            );
-            continue;
+          } else if msg.timestamp + (TTL as i64) < Utc::now().timestamp() {
+              info!(
+                "node {}... - {} has provided an expired timestamp.",
+                hex::encode(&msg.pubkey)[0..10].to_string(),
+                stream.peer_addr().unwrap()
+              );
+              continue;
           }
+
           match msg.destiny.as_str() {
             "create-transaction" => {
               if !validate_sig(
@@ -227,14 +226,21 @@ impl Listener {
                   stream.peer_addr().unwrap()
                 );
                 continue;
+              } else if self.processed.contains(&msg.signed) {
+                info!(
+                  "node {}... - {} has provided an already used signature.",
+                  hex::encode(&msg.pubkey)[0..10].to_string(),
+                  stream.peer_addr().unwrap()
+                );
+                continue;
               }
               println!("{}", self.chain.lock().unwrap().check_balance(msg.pubkey.encode_hex()));
               self.chain.lock().unwrap().add_block(msg.pubkey.encode_hex(), msg.data[0].to.to_string(), msg.data[0].amount);
-              println!("{}", self.chain.lock().unwrap().to_string());
+              println!("{:?}", self.chain.lock().unwrap().to_string());
               // self.create_transaction(msg)
             }
             "get-chain" => {
-              println!("{}", self.chain.lock().unwrap().to_string());
+              println!("{:?}", self.chain.lock().unwrap().to_string());
             }
             _ => error!("hey"),
           }
