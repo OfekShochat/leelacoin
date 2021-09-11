@@ -1,5 +1,6 @@
 use chrono::Utc;
 use ed25519_dalek::{Keypair, PublicKey, Signature, Signer, Verifier};
+use hex::ToHex;
 use log::{error, info};
 use miniz_oxide::{deflate::compress_to_vec, inflate::decompress_to_vec};
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,6 @@ use std::{
   io::{Read, Write},
   net::{TcpListener, TcpStream},
 };
-use hex::ToHex;
 
 use crate::block::{Block, DataPoint};
 use crate::blockchain::Chain;
@@ -101,7 +101,10 @@ impl Client {
     thread::spawn(move || {
       Listener::new(contacts, banned, chain);
     });
-    println!("Starting client with ID={}", self.keypair.public.encode_hex::<String>());
+    println!(
+      "Starting client with ID={}",
+      self.keypair.public.encode_hex::<String>()
+    );
     loop {
       let mut input = String::new();
       stdin().read_line(&mut input).unwrap();
@@ -209,12 +212,12 @@ impl Listener {
           if self.banned_list.lock().unwrap().contains(&msg.pubkey) {
             continue;
           } else if msg.timestamp + (TTL as i64) < Utc::now().timestamp() {
-              info!(
-                "node {}... - {} has provided an expired timestamp.",
-                hex::encode(&msg.pubkey)[0..10].to_string(),
-                stream.peer_addr().unwrap()
-              );
-              continue;
+            info!(
+              "node {}... - {} has provided an expired timestamp.",
+              hex::encode(&msg.pubkey)[0..10].to_string(),
+              stream.peer_addr().unwrap()
+            );
+            continue;
           }
 
           match msg.destiny.as_str() {
@@ -238,8 +241,19 @@ impl Listener {
                 );
                 continue;
               }
-              println!("{}", self.chain.lock().unwrap().check_balance(msg.pubkey.encode_hex()));
-              self.chain.lock().unwrap().add_block(msg.pubkey.encode_hex(), msg.data[0].to.to_string(), msg.data[0].amount);
+              println!(
+                "{}",
+                self
+                  .chain
+                  .lock()
+                  .unwrap()
+                  .check_balance(msg.pubkey.encode_hex())
+              );
+              self.chain.lock().unwrap().add_block(
+                msg.pubkey.encode_hex(),
+                msg.data[0].to.to_string(),
+                msg.data[0].amount,
+              );
               println!("{:?}", self.chain.lock().unwrap().to_string());
               // self.create_transaction(msg)
             }
