@@ -15,7 +15,7 @@ use std::{
 };
 use hex::ToHex;
 
-use crate::block::DataPoint;
+use crate::block::{Block, DataPoint};
 use crate::blockchain::Chain;
 
 const BUFFER_SIZE: usize = 65536;
@@ -69,6 +69,7 @@ struct Message {
   #[serde(with = "serde_bytes")]
   signed: Vec<u8>,
   data: Vec<DataPoint>,
+  blocks: Vec<Block>,
   timestamp: i64,
 }
 
@@ -100,6 +101,7 @@ impl Client {
     thread::spawn(move || {
       Listener::new(contacts, banned, chain);
     });
+    println!("Starting client with ID={}", self.keypair.public.encode_hex::<String>());
     loop {
       let mut input = String::new();
       stdin().read_line(&mut input).unwrap();
@@ -142,6 +144,7 @@ impl Client {
       )
       .to_vec(),
       data: vec![data],
+      blocks: vec![],
       timestamp: current_time,
     };
     self.send_all(to_string(&msg).unwrap().as_bytes());
@@ -158,6 +161,7 @@ impl Client {
       pubkey: Bytes::new(&self.keypair.public.to_bytes()).to_vec(),
       signed: Bytes::new(b"NONE").to_vec(),
       data: vec![],
+      blocks: vec![],
       timestamp: current_time,
     };
     self.send_all(to_string(&msg).unwrap().as_bytes())
