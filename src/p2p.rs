@@ -219,7 +219,8 @@ impl Listener {
                 &msg.pubkey,
                 msg.data[0].to_string() + &msg.timestamp.to_string(),
                 &msg.signed,
-              ) || self.processed.contains(&msg.signed) {
+              ) || self.processed.contains(&msg.signed)
+              {
                 continue;
               }
             }
