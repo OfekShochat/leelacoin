@@ -51,14 +51,12 @@ fn validate_sig(pubkey: &Vec<u8>, msg: String, signed: &Vec<u8>) -> bool {
 }
 
 fn strip_trailing(buf: &[u8]) -> &[u8] {
-  let mut pos: usize = 0;
   for i in 0..buf.len() {
     if buf[i..i + 3] == [0, 0, 0] {
-      pos = i;
-      break;
+      return &buf[0..i]
     }
   }
-  &buf[0..pos]
+  unreachable!();
 }
 
 #[derive(Debug, Serialize, Deserialize)]
