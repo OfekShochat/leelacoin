@@ -12,6 +12,10 @@ impl Chain {
     chain
   }
 
+  pub fn from_vec(blocks: Vec<Block>) -> Chain {
+    Chain { blocks }
+  }
+
   pub fn create_genesis(&mut self) {
     self.blocks.push(Block::new_genesis())
   }
@@ -55,5 +59,9 @@ impl Chain {
       out.push(to_string(i).unwrap());
     }
     out
+  }
+
+  pub fn to_vec(&mut self) -> Vec<Block> {
+    self.blocks.clone()
   }
 }

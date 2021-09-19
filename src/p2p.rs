@@ -8,6 +8,7 @@ use serde_bytes::Bytes;
 use serde_json::{from_slice, to_string};
 use std::convert::TryFrom;
 use std::io::stdin;
+use std::ops::AddAssign;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::{
@@ -22,7 +23,7 @@ const BUFFER_SIZE: usize = 65536;
 const COMPRESSION_LEVEL: u8 = 9;
 const TTL: usize = 3600;
 lazy_static! {
-  static ref BOOT_NODES: Vec<String> = vec!["127.0.0.1:60129".to_string()];
+  static ref BOOT_NODES: Vec<String> = vec!["127.0.0.1:60000".to_string()];
 }
 
 fn send_message(stream: &mut TcpStream, msg: &[u8]) {
@@ -69,6 +70,7 @@ struct Message {
   data: Vec<DataPoint>,
   blocks: Vec<Block>,
   timestamp: i64,
+  contact: String,
 }
 
 pub struct Client {
@@ -76,6 +78,7 @@ pub struct Client {
   banned_list: Arc<Mutex<Vec<Vec<u8>>>>,
   chain: Arc<Mutex<Chain>>,
   keypair: Keypair,
+  contact: Arc<Mutex<String>>,
 }
 
 impl Client {
@@ -89,6 +92,7 @@ impl Client {
       banned_list: Arc::new(Mutex::new(vec![])),
       keypair,
       chain: Arc::new(Mutex::new(Chain::new())),
+      contact: Arc::new(Mutex::new(String::new())),
     }
   }
 
@@ -96,8 +100,9 @@ impl Client {
     let contacts = Arc::clone(&self.contact_list);
     let banned = Arc::clone(&self.banned_list);
     let chain = Arc::clone(&self.chain);
+    let contact = Arc::clone(&self.contact);
     thread::spawn(move || {
-      Listener::new(contacts, banned, chain);
+      Listener::new(contacts, banned, chain, contact);
     });
     println!(
       "Starting client with ID={}",
@@ -147,6 +152,7 @@ impl Client {
       data: vec![data],
       blocks: vec![],
       timestamp: current_time,
+      contact: self.contact.lock().unwrap().to_string()
     };
     self.send_all(to_string(&msg).unwrap().as_bytes());
   }
@@ -164,8 +170,9 @@ impl Client {
       data: vec![],
       blocks: vec![],
       timestamp: current_time,
+      contact: self.contact.lock().unwrap().to_string(),
     };
-    self.send_all(to_string(&msg).unwrap().as_bytes())
+    self.send_all(to_string(&msg).unwrap().as_bytes());
   }
 }
 
@@ -174,6 +181,7 @@ pub struct Listener {
   banned_list: Arc<Mutex<Vec<Vec<u8>>>>,
   chain: Arc<Mutex<Chain>>,
   processed: Vec<Vec<u8>>,
+  contact: Arc<Mutex<String>>,
 }
 
 impl Listener {
@@ -181,12 +189,14 @@ impl Listener {
     contact_list: Arc<Mutex<Vec<String>>>,
     banned_list: Arc<Mutex<Vec<Vec<u8>>>>,
     chain: Arc<Mutex<Chain>>,
+    contact: Arc<Mutex<String>>,
   ) {
     let mut l = Listener {
       contact_list,
       banned_list,
       processed: vec![],
       chain,
+      contact,
     };
     l.main()
   }
@@ -194,10 +204,12 @@ impl Listener {
   fn main(&mut self) {
     use crate::config as cfg_reader;
     let cfg = cfg_reader::get_config();
-    let listener = TcpListener::bind(format!("0.0.0.0:{}", cfg.port)).unwrap();
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", cfg.port)).unwrap();
+    let contact = listener.local_addr().unwrap().to_string();
+    self.contact.lock().unwrap().add_assign(contact.as_str());
     info!(
       "Listening on {}",
-      listener.local_addr().unwrap().to_string()
+      contact
     );
     for stream in listener.incoming() {
       match stream {
@@ -223,9 +235,27 @@ impl Listener {
               }
             }
             "get-chain" => {
-              println!("{:?}", self.chain.lock().unwrap().to_string());
+              let blocks = self.chain.lock().unwrap().to_vec();
+              self.contact_list.lock().unwrap().push(msg.contact.to_string());
+              self.forward(to_string(&Message {
+                destiny: "give-chain".to_string(),
+                pubkey: "NONE".as_bytes().to_vec(),
+                data: vec![],
+                blocks,
+                signed: "NONE".as_bytes().to_vec(),
+                timestamp: Utc::now().timestamp(),
+                contact: contact.to_string()
+              }).unwrap().as_bytes());
+              self.processed.push(msg.signed);
+              self.cleanup();
+              continue;
             }
-            _ => error!("hey"),
+            "give-chain" => {
+              self.chain = Arc::new(Mutex::new(Chain::from_vec(msg.blocks)));
+              println!("chian chian {:?}", self.chain.lock().unwrap().to_string());
+              continue;
+            }
+            _ => continue,
           }
           self.processed.push(msg.signed);
           self.cleanup();
