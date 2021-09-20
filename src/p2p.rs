@@ -237,15 +237,7 @@ impl Listener {
             "get-chain" => {
               let blocks = self.chain.lock().unwrap().to_vec();
               self.contact_list.lock().unwrap().push(msg.contact.to_string());
-              self.forward(to_string(&Message {
-                destiny: "give-chain".to_string(),
-                pubkey: "NONE".as_bytes().to_vec(),
-                data: vec![],
-                blocks,
-                signed: "NONE".as_bytes().to_vec(),
-                timestamp: Utc::now().timestamp(),
-                contact: contact.to_string()
-              }).unwrap().as_bytes());
+              self.give_chain(blocks, contact.to_string());
               self.processed.push(msg.signed);
               self.cleanup();
               continue;
@@ -264,6 +256,18 @@ impl Listener {
         Err(e) => error!("connection failed with {}", e),
       }
     }
+  }
+
+  fn give_chain(&mut self, blocks: Vec<Block>, contact: String) {
+    self.forward(to_string(&Message {
+      destiny: "give-chain".to_string(),
+      pubkey: "NONE".as_bytes().to_vec(),
+      data: vec![],
+      blocks,
+      signed: "NONE".as_bytes().to_vec(),
+      timestamp: Utc::now().timestamp(),
+      contact
+    }).unwrap().as_bytes());
   }
 
   fn banned(&mut self, pubkey: &Vec<u8>) -> bool {
