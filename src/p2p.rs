@@ -22,6 +22,7 @@ use crate::blockchain::Chain;
 const BUFFER_SIZE: usize = 65536;
 const COMPRESSION_LEVEL: u8 = 9;
 const TTL: usize = 3600;
+const VALIDATOR: bool = true;
 lazy_static! {
   static ref BOOT_NODES: Vec<String> = vec!["127.0.0.1:60000".to_string()];
 }
@@ -233,6 +234,8 @@ impl Listener {
               {
                 continue;
               }
+              if !VALIDATOR { continue; }
+              self.chain.lock().unwrap().add_block(msg.pubkey.encode_hex(), msg.data[0].to.encode_hex(), msg.data[0].amount)
             }
             "get-chain" => {
               let blocks = self.chain.lock().unwrap().to_vec();
