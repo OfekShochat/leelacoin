@@ -55,7 +55,7 @@ fn validate_sig(pubkey: &Vec<u8>, msg: String, signed: &Vec<u8>) -> bool {
 fn strip_trailing(buf: &[u8]) -> &[u8] {
   for i in 0..buf.len() {
     if buf[i..i + 3] == [0, 0, 0] {
-      return &buf[0..i]
+      return &buf[0..i];
     }
   }
   unreachable!();
@@ -153,7 +153,7 @@ impl Client {
       data: vec![data],
       blocks: vec![],
       timestamp: current_time,
-      contact: self.contact.lock().unwrap().to_string()
+      contact: self.contact.lock().unwrap().to_string(),
     };
     self.send_all(to_string(&msg).unwrap().as_bytes());
   }
@@ -208,10 +208,7 @@ impl Listener {
     let listener = TcpListener::bind(format!("127.0.0.1:{}", cfg.port)).unwrap();
     let contact = listener.local_addr().unwrap().to_string();
     self.contact.lock().unwrap().add_assign(contact.as_str());
-    info!(
-      "Listening on {}",
-      contact
-    );
+    info!("Listening on {}", contact);
     for stream in listener.incoming() {
       match stream {
         Ok(mut stream) => {
@@ -234,12 +231,22 @@ impl Listener {
               {
                 continue;
               }
-              if !VALIDATOR { continue; }
-              self.chain.lock().unwrap().add_data(msg.pubkey.encode_hex(), msg.data[0].to_owned());
+              if !VALIDATOR {
+                continue;
+              }
+              self
+                .chain
+                .lock()
+                .unwrap()
+                .add_data(msg.pubkey.encode_hex(), msg.data[0].to_owned());
             }
             "get-chain" => {
               let blocks = self.chain.lock().unwrap().to_vec();
-              self.contact_list.lock().unwrap().push(msg.contact.to_string());
+              self
+                .contact_list
+                .lock()
+                .unwrap()
+                .push(msg.contact.to_string());
               self.give_chain(blocks, contact.to_string());
               self.processed.push(msg.signed);
               self.cleanup();
@@ -262,15 +269,19 @@ impl Listener {
   }
 
   fn give_chain(&mut self, blocks: Vec<Block>, contact: String) {
-    self.forward(to_string(&Message {
-      destiny: "give-chain".to_string(),
-      pubkey: "NONE".as_bytes().to_vec(),
-      data: vec![],
-      blocks,
-      signed: "NONE".as_bytes().to_vec(),
-      timestamp: Utc::now().timestamp(),
-      contact
-    }).unwrap().as_bytes());
+    self.forward(
+      to_string(&Message {
+        destiny: "give-chain".to_string(),
+        pubkey: "NONE".as_bytes().to_vec(),
+        data: vec![],
+        blocks,
+        signed: "NONE".as_bytes().to_vec(),
+        timestamp: Utc::now().timestamp(),
+        contact,
+      })
+      .unwrap()
+      .as_bytes(),
+    );
   }
 
   fn banned(&mut self, pubkey: &Vec<u8>) -> bool {

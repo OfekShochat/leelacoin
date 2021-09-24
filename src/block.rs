@@ -69,12 +69,10 @@ fn data_to_string(data: &Vec<DataPoint>) -> String {
   tobe_hashed
 }
 
-
 impl Block {
   pub fn new(data: Vec<DataPoint>, previous_hash: String) -> Block {
     let tobe_hashed = data_to_string(&data);
-    let (summary, nonce) =
-      hash_with_cost(tobe_hashed + &previous_hash);
+    let (summary, nonce) = hash_with_cost(tobe_hashed + &previous_hash);
 
     Block {
       summary,
@@ -103,11 +101,8 @@ impl Block {
 
   pub fn verify(&self) -> bool {
     if !self.genesis {
-      hash(
-        &(data_to_string(&self.data) +
-          &self.previous_summary +
-          self.nonce.to_string().as_str()),
-      ) == self.summary
+      hash(&(data_to_string(&self.data) + &self.previous_summary + self.nonce.to_string().as_str())) ==
+        self.summary
     } else {
       true
     }

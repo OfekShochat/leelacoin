@@ -10,13 +10,19 @@ pub struct Chain {
 
 impl Chain {
   pub fn new() -> Chain {
-    let mut chain = Chain { blocks: vec![], data_buffer: vec![] };
+    let mut chain = Chain {
+      blocks: vec![],
+      data_buffer: vec![],
+    };
     chain.create_genesis();
     chain
   }
 
   pub fn from_vec(blocks: Vec<Block>) -> Chain {
-    Chain { blocks, data_buffer: vec![] }
+    Chain {
+      blocks,
+      data_buffer: vec![],
+    }
   }
 
   pub fn create_genesis(&mut self) {
@@ -28,7 +34,10 @@ impl Chain {
   }
 
   fn create_block(&mut self) {
-    self.prepend_block(Block::new(self.data_buffer.to_owned(), self.last().summary.clone()));
+    self.prepend_block(Block::new(
+      self.data_buffer.to_owned(),
+      self.last().summary.clone(),
+    ));
   }
 
   pub fn add_data(&mut self, from: String, mut data: DataPoint) {
