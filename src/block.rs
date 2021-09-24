@@ -37,7 +37,7 @@ impl DataPoint {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Block {
   pub summary: String,
-  pub data: DataPoint,
+  pub data: Vec<DataPoint>,
   pub previous_summary: String,
   pub nonce: u64,
   pub timestamp: i64,
@@ -61,14 +61,24 @@ fn hash_with_cost(data: String) -> (String, u64) {
   (h, nonce)
 }
 
+fn data_to_string(data: &Vec<DataPoint>) -> String {
+  let mut tobe_hashed = "".to_string();
+  for d in data {
+    tobe_hashed += &(d.from.clone() + &d.to + d.amount.to_string().as_str());
+  }
+  tobe_hashed
+}
+
+
 impl Block {
-  pub fn new(from: String, to: String, amount: f64, previous_hash: String) -> Block {
+  pub fn new(data: Vec<DataPoint>, previous_hash: String) -> Block {
+    let tobe_hashed = data_to_string(&data);
     let (summary, nonce) =
-      hash_with_cost(from.clone() + &to + &previous_hash + amount.to_string().as_str());
+      hash_with_cost(tobe_hashed + &previous_hash);
 
     Block {
       summary,
-      data: DataPoint::new(from, to, amount),
+      data,
       previous_summary: previous_hash,
       nonce,
       timestamp: Utc::now().timestamp(),
@@ -79,11 +89,11 @@ impl Block {
   pub fn new_genesis() -> Block {
     Block {
       summary: "NONE".to_string(),
-      data: DataPoint {
+      data: vec![DataPoint {
         from: "NOONE".to_string(),
         to: "NOONE".to_string(),
         amount: 0.0,
-      },
+      }],
       previous_summary: "NONE".to_string(),
       nonce: 0,
       timestamp: 0,
@@ -94,10 +104,8 @@ impl Block {
   pub fn verify(&self) -> bool {
     if !self.genesis {
       hash(
-        &(self.data.from.clone() +
-          &self.data.to +
+        &(data_to_string(&self.data) +
           &self.previous_summary +
-          self.data.amount.to_string().as_str() +
           self.nonce.to_string().as_str()),
       ) == self.summary
     } else {

@@ -235,7 +235,7 @@ impl Listener {
                 continue;
               }
               if !VALIDATOR { continue; }
-              self.chain.lock().unwrap().add_block(msg.pubkey.encode_hex(), msg.data[0].to.encode_hex(), msg.data[0].amount)
+              self.chain.lock().unwrap().add_data(msg.pubkey.encode_hex(), msg.data[0].to_owned());
             }
             "get-chain" => {
               let blocks = self.chain.lock().unwrap().to_vec();
