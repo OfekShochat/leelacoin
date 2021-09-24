@@ -19,7 +19,7 @@ use std::{
 use crate::block::{Block, DataPoint};
 use crate::blockchain::Chain;
 
-const BUFFER_SIZE: usize = 65536;
+const BUFFER_SIZE: usize = 131072;
 const COMPRESSION_LEVEL: u8 = 9;
 const TTL: usize = 3600;
 const VALIDATOR: bool = true;

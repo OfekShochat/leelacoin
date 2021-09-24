@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha3::{Digest, Sha3_256};
 
-const COST: usize = 7;
+const COST: usize = 4;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DataPoint {
