@@ -19,7 +19,7 @@ use std::{
 use crate::block::{Block, DataPoint};
 use crate::blockchain::Chain;
 
-const BUFFER_SIZE: usize = 131072;
+const BUFFER_SIZE: usize = 65536;
 const COMPRESSION_LEVEL: u8 = 9;
 const TTL: usize = 3600;
 const VALIDATOR: bool = true;
@@ -33,10 +33,11 @@ fn send_message(stream: &mut TcpStream, msg: &[u8]) {
 }
 
 fn forward(contact_list: std::slice::Iter<String>, buf: &[u8]) {
+  let compressed = compress_to_vec(buf, COMPRESSION_LEVEL);
   for peer in contact_list {
     match TcpStream::connect(&peer) {
       Ok(mut stream) => {
-        send_message(&mut stream, buf);
+        stream.write(&compressed).unwrap();
       }
       Err(e) => {
         error!("couldn't connect to {} with {}", peer, e);
@@ -139,6 +140,7 @@ impl Client {
   }
 
   fn create_transaction(&self, data: DataPoint) {
+    let contact = self.contact.lock().unwrap().to_string();
     let current_time = Utc::now().timestamp();
     let msg = Message {
       destiny: "create-transaction".to_string(),
@@ -146,14 +148,14 @@ impl Client {
       signed: Bytes::new(
         &self
           .keypair
-          .sign((data.to_string() + &current_time.to_string()).as_bytes())
+          .sign((data.to_string() + &current_time.to_string() + &contact).as_bytes())
           .to_bytes(),
       )
       .to_vec(),
       data: vec![data],
       blocks: vec![],
       timestamp: current_time,
-      contact: self.contact.lock().unwrap().to_string(),
+      contact,
     };
     self.send_all(to_string(&msg).unwrap().as_bytes());
   }
@@ -225,15 +227,19 @@ impl Listener {
             "create-transaction" => {
               if !validate_sig(
                 &msg.pubkey,
-                msg.data[0].to_string() + &msg.timestamp.to_string(),
+                msg.data[0].to_string() + &msg.timestamp.to_string() + &msg.contact,
                 &msg.signed,
               ) || self.processed.contains(&msg.signed)
               {
                 continue;
               }
+
+              self.add_contact(msg.contact.to_string());
+
               if !VALIDATOR {
                 continue;
               }
+
               self
                 .chain
                 .lock()
@@ -241,18 +247,19 @@ impl Listener {
                 .add_data(msg.pubkey.encode_hex(), msg.data[0].to_owned());
             }
             "get-chain" => {
+              self.add_contact(msg.contact.to_string());
               let blocks = self.chain.lock().unwrap().to_vec();
-              self
-                .contact_list
-                .lock()
-                .unwrap()
-                .push(msg.contact.to_string());
               self.give_chain(blocks, contact.to_string());
               self.processed.push(msg.signed);
               self.cleanup();
               continue;
             }
             "give-chain" => {
+              if !self.contact_list.lock().unwrap().contains(&contact) {
+                continue;
+              }
+              self.add_contact(msg.contact.to_string());
+
               self.chain = Arc::new(Mutex::new(Chain::from_vec(msg.blocks)));
               println!("chian chian {:?}", self.chain.lock().unwrap().to_string());
               continue;
@@ -261,7 +268,7 @@ impl Listener {
           }
           self.processed.push(msg.signed);
           self.cleanup();
-          self.forward(&buf);
+          self.forward(&buf, msg.contact);
         }
         Err(e) => error!("connection failed with {}", e),
       }
@@ -277,11 +284,22 @@ impl Listener {
         blocks,
         signed: "NONE".as_bytes().to_vec(),
         timestamp: Utc::now().timestamp(),
-        contact,
+        contact: contact.clone(),
       })
       .unwrap()
       .as_bytes(),
+      contact,
     );
+  }
+
+  fn add_contact(&mut self, contact: String) {
+    if !self.contact_list.lock().unwrap().contains(&contact) {
+      self
+        .contact_list
+        .lock()
+        .unwrap()
+        .push(contact);
+    }
   }
 
   fn banned(&mut self, pubkey: &Vec<u8>) -> bool {
@@ -308,7 +326,12 @@ impl Listener {
     decompress_to_vec(stripped).unwrap()
   }
 
-  fn forward(&mut self, buf: &[u8]) {
-    forward(self.contact_list.lock().unwrap().iter(), buf)
+  fn forward(&mut self, buf: &[u8], contact: String) {
+    let mut contacts = self.contact_list.lock().unwrap().clone();
+    if contacts.contains(&contact) {
+      let index = contacts.iter().position(|x| *x == contact).unwrap();
+      contacts.remove(index);
+    }
+    forward(contacts.iter(), buf)
   }
 }
