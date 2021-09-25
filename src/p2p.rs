@@ -71,6 +71,7 @@ struct Message {
   signed: Vec<u8>,
   data: Vec<DataPoint>,
   blocks: Vec<Block>,
+  contacts: Vec<String>,
   timestamp: i64,
   contact: String,
 }
@@ -117,6 +118,7 @@ impl Client {
       match splitted[0] {
         "new-trans" => self.parse_transaction(&splitted[1..splitted.len()]),
         "get-chain" => self.get_chain(),
+        "get-contacts" => self.get_contacts(),
         _ => eprintln!("invalid command: {}", splitted[0]),
       }
     }
@@ -154,6 +156,7 @@ impl Client {
       .to_vec(),
       data: vec![data],
       blocks: vec![],
+      contacts: vec![],
       timestamp: current_time,
       contact,
     };
@@ -172,6 +175,22 @@ impl Client {
       signed: Bytes::new(b"NONE").to_vec(),
       data: vec![],
       blocks: vec![],
+      contacts: vec![],
+      timestamp: current_time,
+      contact: self.contact.lock().unwrap().to_string(),
+    };
+    self.send_all(to_string(&msg).unwrap().as_bytes());
+  }
+
+  fn get_contacts(&self) {
+    let current_time = Utc::now().timestamp();
+    let msg = Message {
+      destiny: "get-contacts".to_string(),
+      pubkey: Bytes::new(&self.keypair.public.to_bytes()).to_vec(),
+      signed: Bytes::new(b"NONE").to_vec(),
+      data: vec![],
+      blocks: vec![],
+      contacts: vec![],
       timestamp: current_time,
       contact: self.contact.lock().unwrap().to_string(),
     };
@@ -264,6 +283,20 @@ impl Listener {
               println!("chian chian {:?}", self.chain.lock().unwrap().to_string());
               continue;
             }
+            "get-contacts" => {
+              self.add_contact(msg.contact.to_string());
+              let contacts = self.contact_list.lock().unwrap().to_vec();
+              self.give_contacts(contacts, contact.to_string());
+              self.processed.push(msg.signed);
+              self.cleanup();
+              continue;
+            }
+            "give-contacts" => {
+              self.add_contacts(msg.contacts);
+              self.processed.push(msg.signed);
+              self.cleanup();
+              continue;
+            }
             _ => continue,
           }
           self.processed.push(msg.signed);
@@ -282,6 +315,25 @@ impl Listener {
         pubkey: "NONE".as_bytes().to_vec(),
         data: vec![],
         blocks,
+        contacts: vec![],
+        signed: "NONE".as_bytes().to_vec(),
+        timestamp: Utc::now().timestamp(),
+        contact: contact.clone(),
+      })
+      .unwrap()
+      .as_bytes(),
+      contact,
+    );
+  }
+
+  fn give_contacts(&mut self, contacts: Vec<String>, contact: String) {
+    self.forward(
+      to_string(&Message {
+        destiny: "give-contacts".to_string(),
+        pubkey: "NONE".as_bytes().to_vec(),
+        data: vec![],
+        blocks: vec![],
+        contacts,
         signed: "NONE".as_bytes().to_vec(),
         timestamp: Utc::now().timestamp(),
         contact: contact.clone(),
@@ -299,6 +351,15 @@ impl Listener {
         .lock()
         .unwrap()
         .push(contact);
+    }
+  }
+
+  fn add_contacts(&mut self, contacts: Vec<String>) {
+    let mycontact = self.contact.lock().unwrap().to_owned();
+    for c in contacts {
+      if c != mycontact {
+        self.add_contact(c);
+      }
     }
   }
 
