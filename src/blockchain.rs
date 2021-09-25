@@ -49,6 +49,7 @@ impl Chain {
   fn check_buffer(&mut self) {
     if self.data_buffer.len() == BLOCK_SIZE {
       self.create_block();
+      self.data_buffer.clear();
     }
   }
 
