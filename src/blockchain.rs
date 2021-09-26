@@ -92,4 +92,8 @@ impl Chain {
   pub fn to_vec(&mut self) -> Vec<Block> {
     self.blocks.clone()
   }
+
+  pub fn len(self) -> usize {
+    self.blocks.len()
+  }
 }
