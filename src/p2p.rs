@@ -279,8 +279,13 @@ impl Listener {
               }
               self.add_contact(msg.contact.to_string());
 
-              self.chain = Arc::new(Mutex::new(Chain::from_vec(msg.blocks)));
-              println!("chian chian {:?}", self.chain.lock().unwrap().to_string());
+              let new_chain = Chain::from_vec(msg.blocks);
+              if new_chain.verify() {
+                self.chain = Arc::new(Mutex::new(new_chain));
+                println!("chian chian {:?}", self.chain.lock().unwrap().to_string());
+              } else {
+                self.ban(msg.pubkey);
+              }
               continue;
             }
             "get-contacts" => {

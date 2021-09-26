@@ -58,7 +58,7 @@ impl Chain {
     println!("{}", self.verify());
   }
 
-  pub fn verify(&mut self) -> bool {
+  pub fn verify(&self) -> bool {
     for b in &self.blocks {
       if b.genesis && !b.verify() {
         return false;
