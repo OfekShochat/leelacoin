@@ -264,14 +264,12 @@ impl Listener {
                 .lock()
                 .unwrap()
                 .add_data(msg.pubkey.encode_hex(), msg.data[0].to_owned());
+              self.forward(&buf, msg.contact);
             }
             "get-chain" => {
               self.add_contact(msg.contact.to_string());
               let blocks = self.chain.lock().unwrap().to_vec();
               self.give_chain(blocks, contact.to_string());
-              self.processed.push(msg.signed);
-              self.cleanup();
-              continue;
             }
             "give-chain" => {
               if !self.contact_list.lock().unwrap().contains(&contact) {
@@ -286,27 +284,19 @@ impl Listener {
               } else {
                 self.ban(msg.pubkey);
               }
-              continue;
             }
             "get-contacts" => {
               self.add_contact(msg.contact.to_string());
               let contacts = self.contact_list.lock().unwrap().to_vec();
               self.give_contacts(contacts, contact.to_string());
-              self.processed.push(msg.signed);
-              self.cleanup();
-              continue;
             }
             "give-contacts" => {
               self.add_contacts(msg.contacts);
-              self.processed.push(msg.signed);
-              self.cleanup();
-              continue;
             }
             _ => continue,
           }
           self.processed.push(msg.signed);
           self.cleanup();
-          self.forward(&buf, msg.contact);
         }
         Err(e) => error!("connection failed with {}", e),
       }
