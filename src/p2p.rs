@@ -259,7 +259,7 @@ impl Listener {
                 .lock()
                 .unwrap()
                 .add_data(msg.pubkey.encode_hex(), msg.data[0].to_owned());
-              self.forward(&buf, msg.contact);
+              self.forward(&stripped, msg.contact);
             }
             "get-chain" => {
               self.add_contact(msg.contact.to_string());
@@ -369,9 +369,9 @@ impl Listener {
 
   fn get_message(&mut self, stream: &mut TcpStream, buf: &mut [u8; BUFFER_SIZE]) -> Vec<u8> {
     stream.read(&mut buf[..]).unwrap();
-    let mut trail: usize = 1;
     let stripped = strip_trailing(buf, 0); // removing trailing zeros
     let mut d = decompress_to_vec(stripped);
+    let mut trail: usize = 1;
     while d.is_err() {
       let stripped = strip_trailing(buf, trail); // removing trailing zeros
       d = decompress_to_vec(stripped);
