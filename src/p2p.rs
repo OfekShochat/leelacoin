@@ -336,11 +336,7 @@ impl Listener {
 
   fn add_contact(&mut self, contact: String) {
     if !self.contact_list.lock().unwrap().contains(&contact) {
-      self
-        .contact_list
-        .lock()
-        .unwrap()
-        .push(contact);
+      self.contact_list.lock().unwrap().push(contact);
     }
   }
 
