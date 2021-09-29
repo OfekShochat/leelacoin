@@ -19,17 +19,12 @@ use std::{
 use crate::block::{Block, DataPoint};
 use crate::blockchain::Chain;
 
-const BUFFER_SIZE: usize = 65536;
+const BUFFER_SIZE: usize = 65536 / 8;
 const COMPRESSION_LEVEL: u8 = 9;
 const TTL: usize = 3600;
 const VALIDATOR: bool = true;
 lazy_static! {
   static ref BOOT_NODES: Vec<String> = vec!["127.0.0.1:60000".to_string()];
-}
-
-fn send_message(stream: &mut TcpStream, msg: &[u8]) {
-  let compressed = compress_to_vec(msg, COMPRESSION_LEVEL);
-  stream.write(&compressed).unwrap();
 }
 
 fn forward(contact_list: std::slice::Iter<String>, buf: &[u8]) {
