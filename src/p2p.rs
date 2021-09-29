@@ -48,10 +48,10 @@ fn validate_sig(pubkey: &Vec<u8>, msg: String, signed: &Vec<u8>) -> bool {
   r.is_ok()
 }
 
-fn strip_trailing(buf: &[u8]) -> &[u8] {
+fn strip_trailing(buf: &[u8], trail: usize) -> &[u8] {
   for i in 0..buf.len() {
     if buf[i..i + 3] == [0, 0, 0] {
-      return &buf[0..i];
+      return &buf[0..i + trail];
     }
   }
   unreachable!();
@@ -369,8 +369,15 @@ impl Listener {
 
   fn get_message(&mut self, stream: &mut TcpStream, buf: &mut [u8; BUFFER_SIZE]) -> Vec<u8> {
     stream.read(&mut buf[..]).unwrap();
-    let stripped = strip_trailing(buf); // removing trailing zeros
-    decompress_to_vec(stripped).unwrap()
+    let mut trail: usize = 1;
+    let stripped = strip_trailing(buf, trail); // removing trailing zeros
+    let mut d = decompress_to_vec(stripped);
+    while d.is_err() {
+      let stripped = strip_trailing(buf, trail); // removing trailing zeros
+      d = decompress_to_vec(stripped);
+      trail += 1;
+    }
+    d.unwrap()
   }
 
   fn forward(&mut self, buf: &[u8], contact: String) {
