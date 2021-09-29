@@ -370,7 +370,7 @@ impl Listener {
   fn get_message(&mut self, stream: &mut TcpStream, buf: &mut [u8; BUFFER_SIZE]) -> Vec<u8> {
     stream.read(&mut buf[..]).unwrap();
     let mut trail: usize = 1;
-    let stripped = strip_trailing(buf, trail); // removing trailing zeros
+    let stripped = strip_trailing(buf, 0); // removing trailing zeros
     let mut d = decompress_to_vec(stripped);
     while d.is_err() {
       let stripped = strip_trailing(buf, trail); // removing trailing zeros
