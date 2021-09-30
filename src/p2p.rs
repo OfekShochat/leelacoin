@@ -267,7 +267,7 @@ impl Listener {
               self.give_chain(blocks, contact.to_string());
             }
             "give-chain" => {
-              if !self.contact_list.lock().unwrap().contains(&contact) {
+              if !self.contact_list.lock().unwrap().contains(&msg.contact) {
                 continue;
               }
               self.add_contact(msg.contact.to_string());
